@@ -617,7 +617,7 @@ const TYPES = {
   inicio:   { name:'Inicio',    shape:'shape-terminator', needsLabel:false, pseudo:()=>'Inicio' },
   fin:      { name:'Fin',       shape:'shape-terminator', needsLabel:false, pseudo:()=>'Fin' },
   entrada:  { name:'Leer',      shape:'shape-parallelogram', needsLabel:true, placeholder:'ej. cve, ht, pht', pseudo:(l)=>`Leer (${l})` },
-  proceso:  { name:'Proceso',   shape:'shape-rect', needsLabel:true, placeholder:'ej. sueldo = ht * pht  (si necesitas varias: sepáralas por línea o por coma)', pseudo:(l)=>l },
+  proceso:  { name:'Proceso y D.V.', shape:'shape-rect', needsLabel:true, placeholder:'ej. sueldo = ht * pht  (si necesitas varias: sepáralas por línea o por coma)', pseudo:(l)=>l },
 
   condDoble:{ name:'Condicional Doble', shape:'shape-diamond', needsLabel:true, placeholder:'ej. cal >= 70',
     pseudo:(l)=>`Si (${l}) entonces`,
