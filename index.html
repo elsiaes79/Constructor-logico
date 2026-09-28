@@ -529,7 +529,7 @@ footer{text-align:center;color:var(--text-dim);font-size:.66rem;margin-top:26px;
         Eliminar (arrastra aquí)
       </button>
       <div class="legend">
-        <b>Óvalo</b>: inicio/fin · <b>Paralelogramo</b>: entrada · <b>Rectángulo</b>: proceso · <b>Rombo</b>: condicional (doble o simple) o ciclo Para · <b>Hexágono</b>: ciclos Mientras / Hacer-Mientras, o Según (selectiva múltiple) · <b>Burbuja de mensaje</b>: imprimir · <b>Círculo</b>: conector (misma página) · <b>Pentágono</b>: conector (entre páginas) · <b>Doble barra</b>: llamar módulo.
+        <b>Óvalo</b>: inicio/fin · <b>Paralelogramo</b>: leer · <b>Rectángulo</b>: proceso · <b>Rombo</b>: condicional (doble o simple) o ciclo Para · <b>Hexágono</b>: ciclos Mientras / Hacer-Mientras, o Según (selectiva múltiple) · <b>Burbuja de mensaje</b>: imprimir · <b>Círculo</b>: conector (misma página) · <b>Pentágono</b>: conector (entre páginas) · <b>Doble barra</b>: llamar módulo.
         <br><br>
         <b>Condicional Doble</b>: si la condición es verdadera sigue por abajo (rama Verdadero); si es falsa, por el lado derecho (rama Falso).
         <br><br>
@@ -569,7 +569,7 @@ footer{text-align:center;color:var(--text-dim);font-size:.66rem;margin-top:26px;
       <button class="verify-btn" id="verifyBtn">Verificar programa</button>
       <div class="feedback" id="feedback">Sin verificar todavía.</div>
       <button class="deskcheck-btn" id="deskCheckBtn">🖊 Prueba de escritorio (tabla)</button>
-      <div class="deskcheck-hint">Simula la ejecución real del programa: pide un valor para cada Entrada, calcula los Procesos, evalúa los condicionales y ciclos (ejecutando solo lo que corresponda), y sigue las llamadas a otros módulos.</div>
+      <div class="deskcheck-hint">Simula la ejecución real del programa: pide un valor para cada Leer, calcula los Procesos, evalúa los condicionales y ciclos (ejecutando solo lo que corresponda), y sigue las llamadas a otros módulos.</div>
       <button class="terminal-btn" id="terminalBtn">▶ Ejecutar (terminal) — beta</button>
       <div class="deskcheck-hint">Corre el programa como una terminal real: las impresiones aparecen como salida de consola, y en cada Leer aparece el cursor ahí mismo para escribir el valor.</div>
       <div class="progress-wrap">
@@ -616,7 +616,7 @@ footer{text-align:center;color:var(--text-dim);font-size:.66rem;margin-top:26px;
 const TYPES = {
   inicio:   { name:'Inicio',    shape:'shape-terminator', needsLabel:false, pseudo:()=>'Inicio' },
   fin:      { name:'Fin',       shape:'shape-terminator', needsLabel:false, pseudo:()=>'Fin' },
-  entrada:  { name:'Entrada',   shape:'shape-parallelogram', needsLabel:true, placeholder:'ej. cve, ht, pht', pseudo:(l)=>`Leer (${l})` },
+  entrada:  { name:'Leer',      shape:'shape-parallelogram', needsLabel:true, placeholder:'ej. cve, ht, pht', pseudo:(l)=>`Leer (${l})` },
   proceso:  { name:'Proceso',   shape:'shape-rect', needsLabel:true, placeholder:'ej. sueldo = ht * pht  (si necesitas varias: sepáralas por línea o por coma)', pseudo:(l)=>l },
 
   condDoble:{ name:'Condicional Doble', shape:'shape-diamond', needsLabel:true, placeholder:'ej. cal >= 70',
