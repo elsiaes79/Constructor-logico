@@ -1,0 +1,2784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Constructor Lógico · Modular</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Constructor Lógico">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg:#0B1220;
+  --panel:#131D33;
+  --panel-2:#1A2740;
+  --trace:#24314F;
+  --accent:#45D6C4;
+  --accent-dim:#2C7A70;
+  --led-green:#3ECF8E;
+  --led-red:#F26D6D;
+  --led-amber:#F5B942;
+  --text:#E7ECF5;
+  --text-dim:#8CA0C4;
+  --key:#1D2B47;
+  --key-edge:#0C1526;
+  --module:#F5B942;
+  --flow-line:var(--text-dim);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 15% 0%, #14203c 0%, transparent 45%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+}
+body.dragging-active{ user-select:none; -webkit-user-select:none; }
+.device{max-width:1440px;margin:0 auto;padding:22px 22px 60px;}
+
+header{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:16px 20px;background:var(--panel);border:1px solid var(--trace);border-radius:14px;margin-bottom:18px;
+}
+.brand{display:flex;align-items:center;gap:14px;}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);}
+.brand h1{font-family:'Space Mono',monospace;font-size:1.1rem;letter-spacing:.06em;margin:0;text-transform:uppercase;}
+.brand p{margin:2px 0 0;font-size:.76rem;color:var(--text-dim);}
+.led-row{display:flex;align-items:center;gap:8px;}
+.led{width:13px;height:13px;border-radius:50%;background:#2a3552;box-shadow:inset 0 0 3px #000;transition:all .25s ease;}
+.led.on-red{background:var(--led-red);box-shadow:0 0 14px var(--led-red);}
+.led.on-amber{background:var(--led-amber);box-shadow:0 0 14px var(--led-amber);}
+.led.on-green{background:var(--led-green);box-shadow:0 0 14px var(--led-green);}
+.led-label{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--text-dim);margin-left:3px;}
+.student input{
+  background:var(--panel-2);border:1px solid var(--trace);border-radius:8px;color:var(--text);
+  padding:7px 10px;font-size:.82rem;width:170px;
+}
+.file-actions{display:flex;gap:8px;}
+.file-btn{
+  font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.03em;text-transform:uppercase;
+  padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;border:1px solid var(--trace);
+  background:var(--panel-2);color:var(--text);white-space:nowrap;
+}
+.file-btn:hover{background:var(--trace);}
+.file-btn.export{border-color:var(--accent);color:var(--accent);}
+.file-btn.export:hover{background:#45D6C414;}
+.file-btn.import{border-color:var(--module);color:var(--module);}
+.file-btn.import:hover{background:#f5b94214;}
+
+.grid{display:grid;grid-template-columns:230px 1fr 300px;gap:16px;align-items:start;}
+@media (max-width:1000px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--panel);border:1px solid var(--trace);border-radius:14px;padding:16px;}
+.panel-sticky{
+  position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;
+}
+@media (max-width:1000px){.panel-sticky{position:static;max-height:none;overflow-y:visible;}}
+.panel h2{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin:0 0 12px;}
+.panel h2 span{color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0;}
+
+/* KEYPAD */
+.keypad{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.key{
+  font-family:'Space Mono',monospace;font-size:.62rem;text-align:center;color:var(--text);
+  background:linear-gradient(180deg,var(--key) 0%, #16223c 100%);
+  border:1px solid var(--key-edge);border-bottom:3px solid var(--key-edge);border-radius:8px;
+  padding:10px 5px;cursor:pointer;user-select:none;transition:transform .05s ease,border-bottom-width .05s ease;
+  touch-action:none;
+}
+.key:hover{border-color:var(--accent-dim);}
+.key:active{transform:translateY(2px);border-bottom-width:1px;}
+.key .shape-tag{display:block;font-size:.53rem;color:var(--text-dim);margin-top:3px;text-transform:uppercase;}
+.legend{margin-top:14px;font-size:.68rem;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--trace);padding-top:10px;}
+.legend b{color:var(--accent);}
+.insert-indicator{
+  margin-top:12px;font-family:'Space Mono',monospace;font-size:.64rem;color:var(--module);
+  background:#f5b94214;border:1px solid var(--module);border-radius:8px;padding:8px 10px;line-height:1.5;
+}
+.paste-btn{
+  width:100%;margin-top:10px;padding:10px;border:1px solid var(--accent);border-radius:8px;background:#45D6C414;
+  color:var(--accent);font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.03em;cursor:pointer;
+  line-height:1.5;text-align:center;
+}
+.paste-btn:hover{background:#45D6C428;}
+.select-mode-btn{
+  width:100%;margin-top:10px;padding:9px;border:1px solid var(--module);border-radius:8px;background:transparent;
+  color:var(--module);font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.03em;cursor:pointer;text-align:center;
+}
+.select-mode-btn:hover{background:#f5b94214;}
+.select-mode-btn.active{background:var(--module);color:#0B1220;}
+.selection-bar{
+  margin-top:10px;padding:10px;border-radius:8px;border:1px solid var(--module);background:#f5b94214;
+  display:flex;flex-direction:column;gap:8px;
+}
+.selection-bar span{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--module);text-align:center;}
+.selection-bar-actions{display:flex;gap:8px;}
+.selection-bar-actions button{
+  flex:1;padding:8px;border-radius:6px;font-family:'Space Mono',monospace;font-size:.64rem;cursor:pointer;
+}
+#copySelectionBtn{border:1px solid var(--module);background:var(--module);color:#0B1220;font-weight:700;}
+#copySelectionBtn:disabled{opacity:.4;cursor:default;}
+#cancelSelectionBtn{border:1px solid var(--trace);background:transparent;color:var(--text-dim);}
+body.selection-mode .copy-btn{opacity:.25;pointer-events:none;}
+body.selection-mode .block-wrap{cursor:pointer;}
+.block-wrap.selected .block{box-shadow:0 0 0 3px var(--module), 0 0 18px #f5b94288;}
+.trash-zone{
+  margin-top:12px;width:100%;padding:12px;border-radius:8px;border:2px dashed var(--led-red);background:transparent;
+  color:var(--led-red);font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;
+  cursor:default;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s ease;
+}
+.trash-zone.drop-hover{background:var(--led-red);color:#0B1220;border-style:solid;transform:scale(1.02);}
+.trash-zone svg{width:16px;height:16px;fill:currentColor;}
+
+/* MODULE TABS */
+.module-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.mtab{
+  font-family:'Space Mono',monospace;font-size:.66rem;padding:7px 12px;border-radius:20px;
+  border:1px solid var(--trace);color:var(--text-dim);cursor:pointer;background:var(--panel-2);
+}
+.mtab.active{border-color:var(--module);color:var(--module);background:#f5b94214;}
+.mtab.add{border-style:dashed;color:var(--accent);}
+.mtab .del{margin-left:6px;color:var(--led-red);cursor:pointer;}
+
+.root-target-chip{
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;padding:7px 12px;border-radius:20px;
+  border:1px dashed var(--accent);color:var(--accent);font-family:'Space Mono',monospace;font-size:.64rem;
+  cursor:pointer;background:transparent;transition:all .15s ease;
+}
+.root-target-chip:hover{background:#45D6C414;}
+.root-target-chip.active-target{border-style:solid;background:#45D6C420;}
+
+/* CANVAS */
+.canvas-wrap{min-height:380px;border-radius:10px;transition:box-shadow .15s ease;padding:6px;}
+.canvas-wrap.root-active{box-shadow:0 0 0 2px var(--accent) inset;}
+.block-list-inner{display:flex;flex-direction:column;align-items:center;width:100%;min-height:44px;border-radius:8px;transition:all .12s ease;}
+.block-list-inner.root-list{min-height:340px;}
+.block-list-inner.dropzone-highlight{outline:2px dashed var(--accent);outline-offset:4px;background:#45D6C40d;}
+.empty-hint-small{color:var(--text-dim);font-size:.72rem;text-align:center;padding:14px 6px;}
+.connector{
+  width:2px;height:18px;background:var(--flow-line);position:relative;border-radius:2px;
+}
+.connector::after{
+  content:'';position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);
+  width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:6px solid var(--flow-line);
+}
+
+/* ===== LÍNEAS DE FLUJO REALES (estilo diagrama, tipo Lucidchart): rutas ortogonales
+   con esquinas redondeadas dibujadas en SVG — nada de líneas rectas con ángulos secos.
+   El SVG usa un viewBox porcentual (0–100 de ancho) así que los carriles quedan
+   alineados con cada rama sin medir nada por JS; las flechas van aparte, como
+   triángulos CSS de tamaño fijo, para que no se deformen al estirar el SVG. */
+.flow-fan{position:relative;width:100%;height:26px;}
+.flow-fan.multi{overflow:visible;}
+.flow-fan .ff-svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;}
+.flow-fan .ff-line{fill:none;stroke:var(--flow-line);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+.flow-fan .ff-arrow{
+  position:absolute;bottom:-1px;width:0;height:0;transform:translateX(-50%);
+  border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--flow-line);
+}
+/* Respaldo para pantallas angostas: ahí las ramas se apilan en columna (ver
+   .branches en el media query de abajo), así que el abanico multi-carril no tiene
+   sentido — se oculta el SVG y se muestra en su lugar una línea recta simple. */
+.ff-mobile-line{display:none;position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--flow-line);border-radius:2px;transform:translateX(-50%);}
+.ff-mobile-line::after{
+  content:'';position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);
+  width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--flow-line);
+}
+@media (max-width:600px){
+  .flow-fan.multi .ff-svg,.flow-fan.multi .ff-arrow{display:none;}
+  .flow-fan.multi .ff-mobile-line{display:block;}
+}
+
+/* Flecha de retorno del ciclo: indica visualmente que el flujo vuelve a evaluar la condición */
+.has-loop-arrow{position:relative;padding-right:26px;}
+.loop-back-svg{position:absolute;top:6px;bottom:6px;right:4px;width:20px;pointer-events:none;overflow:visible;}
+.loop-back-path{stroke:var(--flow-line);stroke-linecap:round;}
+.loop-back-arrow{fill:var(--flow-line);}
+
+/* Hacer-Mientras: el cuerpo se dibuja antes que el símbolo de la condición (que va al
+   final, porque ahí es donde en verdad se evalúa). El grupo entero lleva la flecha de
+   retorno, para que visualmente vaya del final (condición) al inicio (cuerpo). */
+.hacer-mientras-group{
+  display:flex;flex-direction:column;align-items:center;width:100%;
+}
+
+.block-row{display:flex;flex-direction:column;align-items:center;width:100%;touch-action:none;}
+.block-wrap{position:relative;display:inline-flex;max-width:100%;}
+.block{
+  position:relative;min-width:min(200px, 100%);max-width:min(420px, 100%);box-sizing:border-box;padding:12px 18px;font-size:.83rem;color:#0B1220;
+  background:var(--accent);text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+  cursor:grab;
+}
+.block:active{cursor:grabbing;}
+.block-row.dragging-source .block{opacity:.3;}
+.drag-ghost{position:fixed;z-index:9999;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.55);border-radius:4px;}
+.block .label-input, .block .label-select{
+  background:transparent;border:none;border-bottom:1px dashed #0B1220a0;color:#0B1220;
+  font-family:'Inter',sans-serif;font-size:.83rem;text-align:center;min-width:60px;cursor:text;
+}
+.block textarea.label-input{
+  width:220px;max-width:100%;resize:none;overflow:hidden;line-height:1.35;
+  padding:2px 0;font-family:inherit;white-space:pre-wrap;word-break:break-word;
+}
+.block-wrap .tag{
+  position:absolute;top:-9px;left:-4px;font-family:'Space Mono',monospace;font-size:.53rem;
+  background:#0B1220;color:var(--accent);padding:1px 6px;border-radius:6px;border:1px solid var(--accent-dim);
+  z-index:2;
+}
+.block-wrap .copy-btn{
+  position:absolute;top:-11px;right:-8px;width:22px;height:22px;border-radius:50%;
+  background:#0B1220;color:var(--accent);border:1px solid var(--accent-dim);
+  font-size:.72rem;line-height:1;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;touch-action:none;z-index:2;
+}
+.block-wrap .copy-btn:hover{background:var(--accent);color:#0B1220;}
+.block-wrap .copy-btn.just-copied{background:var(--led-green);color:#0B1220;border-color:var(--led-green);}
+
+.shape-terminator{border-radius:999px;background:#7CE0D3;}
+.shape-rect{border-radius:4px;}
+.shape-diamond{
+  background:var(--led-amber);
+  clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  padding:26px 42px;
+}
+.shape-diamond.cond-simple{background:#F2C879;}
+.shape-diamond.loop-para{background:#7FD9FF;}
+.shape-parallelogram{clip-path:polygon(12% 0,100% 0,88% 100%,0% 100%);background:#8FB8FF;}
+.shape-hexagon{clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%);background:#F5B942;}
+.shape-hexagon.loop-mientras{background:#7FD9FF;}
+.shape-hexagon.loop-hacermientras{background:#C9A0FF;}
+.shape-hexagon.switch-multi{background:#FF9466;}
+.shape-message{
+  background:#F19BD6;
+  border-radius:16px;
+  position:relative;
+}
+.shape-message::after{
+  content:'';
+  position:absolute;
+  left:26px;
+  bottom:-9px;
+  width:0;height:0;
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+  border-top:10px solid #F19BD6;
+}
+.shape-circle{width:56px;height:56px;min-width:56px;max-width:56px;border-radius:50%;background:#A0F0C8;padding:0;}
+.shape-pentagon{clip-path:polygon(0% 0%,70% 0%,100% 50%,70% 100%,0% 100%);background:#C6A8FF;}
+.shape-predefined{background:var(--module);border-radius:4px;box-shadow:inset 7px 0 0 -3px #0B1220, inset -7px 0 0 -3px #0B1220;}
+
+/* RAMAS / CUERPOS */
+.branches{display:flex;gap:14px;width:100%;justify-content:center;margin:8px 0;flex-wrap:wrap;}
+.branch{
+  flex:1;min-width:min(150px, 100%);max-width:400px;border:1px dashed var(--trace);border-radius:10px;padding:10px;
+  display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:all .15s ease;
+}
+.branch:hover{border-color:var(--accent-dim);}
+.branch.active-target{border-color:var(--accent);border-style:solid;background:#45D6C40d;}
+.branch-label{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;}
+.branch.branch-true .branch-label{color:var(--led-green);}
+.branch.branch-false .branch-label{color:var(--led-red);}
+.branch.branch-loop .branch-label{color:#7FD9FF;}
+.branch.branch-case .branch-label{color:#FF9466;}
+.branch.branch-default .branch-label{color:var(--text-dim);}
+
+/* Casos de la estructura Según (selectiva múltiple) */
+.case-header{display:flex;align-items:center;gap:6px;width:100%;margin-bottom:8px;}
+.case-value-input{
+  flex:1;background:var(--panel-2);border:1px solid var(--trace);border-radius:6px;color:#FF9466;
+  font-family:'Space Mono',monospace;font-size:.68rem;padding:5px 7px;text-align:center;min-width:0;
+}
+.case-value-input::placeholder{color:var(--text-dim);}
+.case-del-btn{
+  flex:none;width:20px;height:20px;border-radius:50%;border:1px solid var(--led-red);background:transparent;
+  color:var(--led-red);font-size:.7rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+}
+.case-del-btn:hover{background:var(--led-red);color:#0B1220;}
+.add-case-btn{
+  flex:none;min-width:120px;border:1px dashed var(--accent);border-radius:10px;background:transparent;
+  color:var(--accent);font-family:'Space Mono',monospace;font-size:.66rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;line-height:1.4;
+}
+.add-case-btn:hover{background:#45D6C414;}
+
+/* PSEUDOCODE / VERIFY / PROGRESS */
+.pseudo{
+  font-family:'Space Mono',monospace;font-size:.7rem;line-height:1.6;background:#0B1220;border:1px solid var(--trace);
+  border-radius:8px;padding:12px;min-height:150px;max-height:340px;overflow-y:auto;color:#B9E6DC;white-space:pre-wrap;
+  width:100%;box-sizing:border-box;resize:vertical;outline:none;
+}
+.pseudo:focus{border-color:var(--accent);}
+.pseudo-error{
+  margin-top:8px;padding:9px 11px;border-radius:8px;border:1px solid var(--led-red);background:#f26d6d14;
+  color:var(--led-red);font-family:'Space Mono',monospace;font-size:.7rem;line-height:1.5;white-space:pre-wrap;
+}
+.verify-btn{
+  width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:var(--accent);color:#0B1220;
+  font-family:'Space Mono',monospace;font-size:.73rem;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;font-weight:700;
+}
+.verify-btn:hover{background:#5FE9DA;}
+.feedback{margin-top:12px;font-size:.78rem;padding:10px 12px;border-radius:8px;border:1px solid var(--trace);color:var(--text-dim);min-height:20px;white-space:pre-wrap;}
+.feedback.ok{border-color:var(--led-green);color:var(--led-green);background:#3ecf8e14;}
+.feedback.err{border-color:var(--led-red);color:var(--led-red);background:#f26d6d14;}
+
+.deskcheck-btn{
+  width:100%;margin-top:8px;padding:11px;border:none;border-radius:8px;background:var(--module);color:#0B1220;
+  font-family:'Space Mono',monospace;font-size:.73rem;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;font-weight:700;
+}
+.deskcheck-btn:hover{background:#f8c869;}
+.deskcheck-hint{font-size:.68rem;color:var(--text-dim);margin-top:8px;line-height:1.5;}
+.deskcheck-panel{margin-top:16px;}
+.dt-table-wrap{overflow-x:auto;border:1px solid var(--trace);border-radius:8px;}
+.dt-table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.7rem;min-width:640px;}
+.dt-table th{background:var(--panel-2);color:var(--module);text-align:left;padding:7px 10px;border-bottom:1px solid var(--trace);white-space:nowrap;}
+.dt-table td{padding:7px 10px;border-bottom:1px solid var(--trace);color:var(--text);vertical-align:top;}
+.dt-table tr:nth-child(even) td{background:#ffffff05;}
+.dt-table td.dt-mod{color:var(--module);white-space:nowrap;}
+.dt-table td.dt-sym{color:var(--accent);white-space:nowrap;}
+.dt-table td.dt-vars{color:#B9E6DC;}
+.dt-close{width:auto;padding:9px 16px;margin-top:14px;border:none;border-radius:8px;background:var(--panel-2);color:var(--text);
+  font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
+.dt-close:hover{background:var(--trace);}
+
+.progress-wrap{margin-top:16px;}
+.xp-bar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;margin-top:6px;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--led-green));width:0%;transition:width .4s ease;}
+.xp-label{font-size:.7rem;color:var(--text-dim);display:flex;justify-content:space-between;}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.badge{font-family:'Space Mono',monospace;font-size:.58rem;padding:4px 8px;border-radius:20px;border:1px solid var(--trace);color:var(--text-dim);}
+.badge.unlocked{border-color:var(--led-green);color:var(--led-green);background:#3ecf8e14;}
+
+.terminal-btn{
+  width:100%;margin-top:8px;padding:11px;border:1px solid var(--accent);border-radius:8px;background:transparent;
+  color:var(--accent);font-family:'Space Mono',monospace;font-size:.73rem;letter-spacing:.05em;text-transform:uppercase;
+  cursor:pointer;font-weight:700;
+}
+.terminal-btn:hover{background:#45D6C414;}
+.terminal-panel{margin-top:16px;}
+.terminal{
+  background:#03060b;border:1px solid var(--trace);border-radius:8px;padding:14px 16px;
+  font-family:'Space Mono',monospace;font-size:.78rem;line-height:1.7;color:#B9E6DC;
+  min-height:220px;max-height:460px;overflow-y:auto;white-space:pre-wrap;
+}
+.terminal .line{display:block;}
+.terminal .line.out{color:#E7ECF5;}
+.terminal .line.sys{color:var(--text-dim);font-style:italic;}
+.terminal .line.err{color:var(--led-red);}
+.terminal .line.ok{color:var(--led-green);}
+.terminal .prompt-line{display:flex;align-items:center;gap:6px;}
+.terminal .prompt-label{color:var(--module);white-space:nowrap;}
+.terminal .prompt-input{
+  background:transparent;border:none;outline:none;color:#B9E6DC;font-family:'Space Mono',monospace;font-size:.78rem;
+  flex:1;caret-color:var(--accent);min-width:40px;
+}
+.terminal-actions{display:flex;gap:8px;margin-top:12px;}
+.terminal-actions .dt-close{flex:1;}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(3,6,11,.72);z-index:10000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.modal-box{
+  background:var(--panel);border:1px solid var(--trace);border-radius:14px;padding:20px;
+  width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.modal-box h3{margin:0 0 12px;font-family:'Space Mono',monospace;font-size:.82rem;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;}
+.modal-box p{margin:0 0 14px;font-size:.85rem;color:var(--text);line-height:1.5;}
+.modal-box input{
+  width:100%;background:var(--panel-2);border:1px solid var(--trace);border-radius:8px;color:var(--text);
+  padding:10px 12px;font-size:.88rem;margin-bottom:16px;font-family:'Inter',sans-serif;
+}
+.modal-box input:focus{outline:none;border-color:var(--accent);}
+.modal-actions{display:flex;gap:10px;}
+.modal-actions button{
+  flex:1;padding:11px;border:none;border-radius:8px;font-family:'Space Mono',monospace;font-size:.72rem;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-weight:700;
+}
+.modal-btn-primary{background:var(--accent);color:#0B1220;}
+.modal-btn-primary:hover{background:#5FE9DA;}
+.modal-btn-danger{background:var(--led-red);color:#0B1220;}
+.modal-btn-danger:hover{background:#f88;}
+.modal-btn-secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--trace);}
+.modal-btn-secondary:hover{background:var(--trace);}
+
+.roster-btn{
+  font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.03em;text-transform:uppercase;
+  padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;border:1px solid var(--module);
+  background:transparent;color:var(--module);white-space:nowrap;
+}
+.roster-btn:hover{background:#f5b94214;}
+.roster-panel{margin-top:16px;}
+.roster-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;}
+.roster-file-label{
+  font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.03em;text-transform:uppercase;
+  padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:1px solid var(--accent);
+  background:transparent;color:var(--accent);
+}
+.roster-file-label:hover{background:#45D6C414;}
+.roster-hint{font-size:.68rem;color:var(--text-dim);line-height:1.5;flex:1;min-width:220px;}
+.roster-table-wrap{overflow-x:auto;border:1px solid var(--trace);border-radius:8px;}
+.roster-table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.7rem;min-width:820px;}
+.roster-table th{background:var(--panel-2);color:var(--module);text-align:left;padding:8px 10px;border-bottom:1px solid var(--trace);white-space:nowrap;}
+.roster-table td{padding:8px 10px;border-bottom:1px solid var(--trace);color:var(--text);vertical-align:top;}
+.roster-table tr:nth-child(even) td{background:#ffffff05;}
+.roster-empty{color:var(--text-dim);font-size:.8rem;padding:20px;text-align:center;}
+.level-tag{font-family:'Space Mono',monospace;font-size:.62rem;padding:3px 9px;border-radius:20px;border:1px solid var(--trace);white-space:nowrap;}
+.level-basico{color:var(--text-dim);border-color:var(--trace);}
+.level-intermedio{color:var(--led-amber);border-color:var(--led-amber);background:#f5b94214;}
+.level-avanzado{color:var(--led-green);border-color:var(--led-green);background:#3ecf8e14;}
+.valid-tag{font-family:'Space Mono',monospace;font-size:.62rem;padding:3px 9px;border-radius:20px;border:1px solid var(--trace);}
+.valid-si{color:var(--led-green);border-color:var(--led-green);background:#3ecf8e14;}
+.valid-no{color:var(--led-red);border-color:var(--led-red);background:#f26d6d14;}
+.roster-action{
+  font-family:'Space Mono',monospace;font-size:.62rem;padding:4px 10px;border-radius:6px;border:1px solid var(--trace);
+  background:var(--panel-2);color:var(--text);cursor:pointer;margin-right:6px;
+}
+.roster-action:hover{background:var(--trace);}
+.roster-action.danger{border-color:var(--led-red);color:var(--led-red);}
+.roster-action.danger:hover{background:#f26d6d14;}
+
+footer{text-align:center;color:var(--text-dim);font-size:.66rem;margin-top:26px;font-family:'Space Mono',monospace;}
+
+/* ===== AJUSTES MÓVILES ===== */
+@media (max-width:600px){
+  .device{padding:12px 12px 40px;}
+  header{padding:14px;gap:12px;}
+  .brand h1{font-size:.95rem;}
+  .led-row{gap:10px;order:3;width:100%;justify-content:space-between;}
+  .student{order:2;}
+  .student input{width:140px;}
+  .file-actions{order:4;width:100%;}
+  .file-btn{flex:1;padding:10px 6px;font-size:.62rem;}
+  .roster-btn{width:100%;padding:12px;font-size:.66rem;}
+  .roster-controls{flex-direction:column;align-items:stretch;}
+  .roster-file-label{text-align:center;}
+  .panel{padding:12px;}
+  .key{padding:14px 6px;font-size:.68rem;}
+  .mtab{padding:10px 14px;font-size:.72rem;}
+  .block{min-width:0;width:100%;max-width:100%;padding:14px 16px;font-size:.9rem;}
+  .verify-btn, .deskcheck-btn{padding:14px;font-size:.8rem;}
+  .dt-close{width:100%;padding:12px;}
+  .xp-label, .led-label{font-size:.68rem;}
+  .badge{font-size:.62rem;padding:6px 10px;}
+  .branches{flex-direction:column;}
+  .branch{max-width:100%;}
+  /* En columna, el abanico multi-carril no aplica (ya lo oculta .flow-fan.multi arriba);
+     cada rama apilada queda unida por la línea recta simple de .connector normal. */
+  .loop-back-svg{right:-2px;width:14px;}
+}
+@media (hover:none){
+  .key:hover, .mtab:hover, .verify-btn:hover, .deskcheck-btn:hover, .dt-close:hover, .branch:hover, .file-btn:hover{border-color:inherit;background:inherit;}
+}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <header>
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1>Constructor Lógico · Modular</h1>
+        <p>Simbología ISO/ANSI (Cuadernillo LCC) + diseño modular (Top-Down)</p>
+      </div>
+    </div>
+    <div class="led-row">
+      <div class="led" id="led-red"></div><span class="led-label">Error</span>
+      <div class="led" id="led-amber"></div><span class="led-label">Construyendo</span>
+      <div class="led" id="led-green"></div><span class="led-label">Válido</span>
+    </div>
+    <div class="student"><input id="studentName" type="text" placeholder="Nombre del estudiante" value="Estudiante"></div>
+    <div class="file-actions">
+      <button class="file-btn export" id="exportBtn" title="Descarga el diagrama completo (todos los módulos) como archivo">⬇ Exportar</button>
+      <button class="file-btn import" id="importBtn" title="Carga un diagrama previamente exportado">⬆ Importar</button>
+      <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;">
+      <button class="roster-btn" id="rosterToggleBtn" title="Importa y compara los diagramas de varios alumnos">👥 Gestionar alumnos</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- SÍMBOLOS -->
+    <div class="panel panel-sticky">
+      <h2>Símbolos <span>(ISO/ANSI)</span></h2>
+      <div class="keypad" id="keypad"></div>
+      <div class="insert-indicator" id="insertIndicator">Agregando en: —</div>
+      <button class="paste-btn" id="pasteBtn" style="display:none;"></button>
+      <button class="select-mode-btn" id="selectModeBtn">☑ Seleccionar varios bloques</button>
+      <div class="selection-bar" id="selectionBar" style="display:none;">
+        <span id="selectionCount">0 seleccionado(s)</span>
+        <div class="selection-bar-actions">
+          <button id="copySelectionBtn" disabled>Copiar grupo</button>
+          <button id="cancelSelectionBtn">Cancelar</button>
+        </div>
+      </div>
+      <button class="trash-zone" id="trashZone" title="Arrastra un bloque hasta aquí para eliminarlo">
+        <svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zm-2 6h2v9H7V9zm4 0h2v9h-2V9zm4 0h2v9h-2V9zM6 7h12l-1 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7z"/></svg>
+        Eliminar (arrastra aquí)
+      </button>
+      <div class="legend">
+        <b>Óvalo</b>: inicio/fin · <b>Paralelogramo</b>: entrada · <b>Rectángulo</b>: proceso · <b>Rombo</b>: condicional (doble o simple) o ciclo Para · <b>Hexágono</b>: ciclos Mientras / Hacer-Mientras, o Según (selectiva múltiple) · <b>Burbuja de mensaje</b>: imprimir · <b>Círculo</b>: conector (misma página) · <b>Pentágono</b>: conector (entre páginas) · <b>Doble barra</b>: llamar módulo.
+        <br><br>
+        <b>Condicional Doble</b>: si la condición es verdadera sigue por abajo (rama Verdadero); si es falsa, por el lado derecho (rama Falso).
+        <br><br>
+        <b>Condicional Simple</b>: solo tiene rama Verdadero; si la condición es falsa, el flujo continúa directo sin ejecutar nada.
+        <br><br>
+        <b>Combinar condiciones:</b> usa <code>&&</code> para "Y", <code>||</code> para "O", y <code>!</code> para "NO" (ej. <code>edad &gt;= 18 && ficha == 1</code>). No uses <code>^</code> ni <code>~</code>: no significan lo mismo que en matemáticas, y en teclado en español son teclas muertas de acentos.
+        <br><br>
+        <b>Para / Mientras</b>: evalúan la condición <i>antes</i> de repetir el cuerpo (0 o más veces). <b>Hacer-Mientras</b>: ejecuta el cuerpo primero y evalúa la condición al final (siempre al menos una vez).
+        <br><br>
+        <b>Según (selectiva múltiple)</b>: en el bloque escribes la variable selectora (ej. <code>CARR</code>). Cada rama de abajo es un "caso": escribe en su recuadro el valor que debe coincidir (ej. <code>"Economía"</code>) y arma su contenido adentro. Usa "+ agregar caso" para más ramas, la ✕ para quitar una, y la rama "Otro / ninguno coincide" se ejecuta cuando el valor no coincidió con ningún caso.
+        <br><br>
+        <b>Cómo mover un bloque:</b> mantén presionado sobre él y arrástralo a la posición deseada, dentro de la secuencia o dentro de una rama/cuerpo.
+        <br><br>
+        <b>Cómo colocar un símbolo nuevo con precisión:</b> mantén presionado sobre una tecla de arriba y arrástrala directo hasta el lugar exacto del diagrama donde la quieres soltar (también puedes tocarla una vez para agregarla en el punto de inserción activo, como antes).
+        <br><br>
+        <b>Cómo copiar un bloque:</b> toca el botoncito ⧉ en la esquina de cualquier bloque para copiarlo (con todo y sus ramas, si las tiene). Luego toca dónde quieres agregarlo y usa el botón "Pegar" que aparece aquí arriba.
+        <br><br>
+        <b>Cómo copiar VARIOS bloques sueltos juntos:</b> activa "☑ Seleccionar varios bloques", toca cada uno de los que quieras (deben estar todos en la misma secuencia o rama), toca "Copiar grupo", y luego usa "Pegar" donde quieras — se pegan todos juntos y en el mismo orden.
+        <br><br>
+        <b>Dónde se agregan los símbolos nuevos:</b> toca la secuencia principal o una rama/cuerpo para elegir dónde se insertará el siguiente símbolo (ver indicador arriba).
+      </div>
+    </div>
+
+    <!-- CONSTRUCCIÓN (por módulo) -->
+    <div class="panel">
+      <h2>Área de construcción lógica <span id="moduleCanvasLabel"></span></h2>
+      <div class="module-tabs" id="moduleTabs"></div>
+      <div class="root-target-chip" id="rootTargetChip">🎯 Agregar en secuencia principal del módulo</div>
+      <div class="canvas-wrap" id="canvas"></div>
+    </div>
+
+    <!-- PSEUDOCÓDIGO + VERIFICACIÓN + PROGRESO -->
+    <div class="panel">
+      <h2>Pseudocódigo generado <span>(editable — el diagrama se reconstruye automáticamente)</span></h2>
+      <textarea class="pseudo" id="pseudoOut" spellcheck="false">// vacío —</textarea>
+      <div class="pseudo-error" id="pseudoError" style="display:none;"></div>
+      <button class="verify-btn" id="verifyBtn">Verificar programa</button>
+      <div class="feedback" id="feedback">Sin verificar todavía.</div>
+      <button class="deskcheck-btn" id="deskCheckBtn">🖊 Prueba de escritorio (tabla)</button>
+      <div class="deskcheck-hint">Simula la ejecución real del programa: pide un valor para cada Entrada, calcula los Procesos, evalúa los condicionales y ciclos (ejecutando solo lo que corresponda), y sigue las llamadas a otros módulos.</div>
+      <button class="terminal-btn" id="terminalBtn">▶ Ejecutar (terminal) — beta</button>
+      <div class="deskcheck-hint">Corre el programa como una terminal real: las impresiones aparecen como salida de consola, y en cada Leer aparece el cursor ahí mismo para escribir el valor.</div>
+      <div class="progress-wrap">
+        <div class="xp-label"><span id="xpText">XP: 0</span><span id="levelText">Nivel: Aprendiz</span></div>
+        <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+        <div class="badges" id="badges"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel deskcheck-panel" id="deskcheckPanel" style="display:none;">
+    <h2>Resultado de la prueba de escritorio <span id="deskcheckSubtitle"></span></h2>
+    <div class="dt-table-wrap"><div id="deskcheckTableWrap"></div></div>
+    <button class="dt-close" id="closeDeskCheck">Cerrar</button>
+  </div>
+
+  <div class="panel terminal-panel" id="terminalPanel" style="display:none;">
+    <h2>Terminal de ejecución <span>(beta)</span></h2>
+    <div class="terminal" id="terminalOutput"></div>
+    <div class="terminal-actions">
+      <button class="dt-close" id="stopTerminal">⏹ Detener</button>
+      <button class="dt-close" id="closeTerminal">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+
+  <div class="panel roster-panel" id="rosterPanel" style="display:none;">
+    <h2>Gestión de alumnos <span>(solo durante esta sesión — no se guarda al cerrar)</span></h2>
+    <div class="roster-controls">
+      <label class="roster-file-label" for="rosterFileInput">⬆ Importar diagramas de alumnos</label>
+      <input type="file" id="rosterFileInput" accept=".json,application/json" multiple style="display:none;">
+      <span class="roster-hint">Selecciona uno o varios archivos .json exportados por tus alumnos. El nivel de razonamiento lógico se calcula según qué estructuras usó cada quien: básico (solo secuencia), intermedio (usa condicionales o ciclos), avanzado (los anida, usa arreglos/matrices, o divide su solución en varios módulos con llamadas).</span>
+    </div>
+    <div class="roster-table-wrap"><div id="rosterTableWrap"><div class="roster-empty">Todavía no has importado ningún diagrama de alumno.</div></div></div>
+    <button class="dt-close" id="exportRosterCsv" style="margin-top:14px;">⬇ Exportar resumen (CSV)</button>
+  </div>
+
+  <footer>PROTOTIPO DE SOFTWARE — símbolos basados en el Cuadernillo LCC (ISO/ANSI) · estructura modular basada en refinamiento sucesivo Top-Down</footer>
+</div>
+
+<script>
+const TYPES = {
+  inicio:   { name:'Inicio',    shape:'shape-terminator', needsLabel:false, pseudo:()=>'Inicio' },
+  fin:      { name:'Fin',       shape:'shape-terminator', needsLabel:false, pseudo:()=>'Fin' },
+  entrada:  { name:'Entrada',   shape:'shape-parallelogram', needsLabel:true, placeholder:'ej. cve, ht, pht', pseudo:(l)=>`Leer (${l})` },
+  proceso:  { name:'Proceso',   shape:'shape-rect', needsLabel:true, placeholder:'ej. sueldo = ht * pht  (si necesitas varias: sepáralas por línea o por coma)', pseudo:(l)=>l },
+
+  condDoble:{ name:'Condicional Doble', shape:'shape-diamond', needsLabel:true, placeholder:'ej. cal >= 70',
+    pseudo:(l)=>`Si (${l}) entonces`,
+    slotDefs:[ {key:'true', label:'Verdadero (Si)', cls:'branch-true'}, {key:'false', label:'Falso (No)', cls:'branch-false'} ] },
+
+  condSimple:{ name:'Condicional Simple', shape:'shape-diamond', extraClass:'cond-simple', needsLabel:true, placeholder:'ej. sueldo < 1000',
+    pseudo:(l)=>`Si (${l}) entonces`,
+    slotDefs:[ {key:'true', label:'Verdadero (Si) — si es falso, continúa directo', cls:'branch-true'} ] },
+
+  para:     { name:'Para',      shape:'shape-diamond', extraClass:'loop-para', needsLabel:true, placeholder:'ej. i <= 10  (condición evaluable)',
+    pseudo:(l)=>`Repetir mientras (${l}) hacer`,
+    slotDefs:[ {key:'body', label:'Cuerpo del ciclo', cls:'branch-loop'} ] },
+
+  mientras: { name:'Mientras',  shape:'shape-hexagon', extraClass:'loop-mientras', needsLabel:true, placeholder:'ej. i <= n',
+    pseudo:(l)=>`Mientras (${l}) repetir`,
+    slotDefs:[ {key:'body', label:'Cuerpo del ciclo', cls:'branch-loop'} ] },
+
+  hacermientras:{ name:'Hacer-Mientras', shape:'shape-hexagon', extraClass:'loop-hacermientras', needsLabel:true, placeholder:'ej. i <= n',
+    pseudo:(l)=>`Mientras (${l})`,
+    isDoWhile:true,
+    slotDefs:[ {key:'body', label:'Cuerpo del ciclo (se ejecuta al menos 1 vez)', cls:'branch-loop'} ] },
+
+  salida:   { name:'Imprimir',  shape:'shape-message', needsLabel:true, placeholder:'ej. cve, sueldo', pseudo:(l)=>`Imprimir (${l})` },
+  conector: { name:'Conector',  shape:'shape-circle', needsLabel:true, placeholder:'1', pseudo:(l)=>`Conector ${l} (misma página)` },
+  conectorp:{ name:'Conector pág.', shape:'shape-pentagon', needsLabel:true, placeholder:'A', pseudo:(l)=>`Conector ${l} (entre páginas)` },
+  llamar:   { name:'Llamar módulo', shape:'shape-predefined', needsLabel:false, isCall:true, pseudo:(l)=>`Llamar módulo: ${l}` },
+
+  segun:    { name:'Según (Selectiva Múltiple)', shape:'shape-hexagon', extraClass:'switch-multi', needsLabel:true,
+    placeholder:'ej. CARR  (variable selectora)', isSwitch:true,
+    pseudo:(l)=>`Según (${l}) hacer` },
+};
+
+let modules = { principal: { name:'Programa Principal', blocks:[] } };
+let moduleOrder = ['principal'];
+let activeModuleId = 'principal';
+let uid = 0;
+let xp = 0;
+
+let insertionTarget = modules.principal.blocks;
+let insertionLabel = modules.principal.name;
+
+const BADGES = [
+  {threshold:10, name:'Aprendiz de la Lógica'},
+  {threshold:30, name:'Constructor de Algoritmos'},
+  {threshold:60, name:'Maestro del Pseudocódigo'},
+];
+
+// Escapa texto de usuario antes de insertarlo vía innerHTML (en atributos como value="..."
+// o como contenido de texto), para que comillas, < > y & no rompan el HTML ni se pierdan datos.
+function escapeHtml(str){
+  return String(str==null ? '' : str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function buildKeypad(){
+  const pad = document.getElementById('keypad');
+  Object.entries(TYPES).forEach(([key, def])=>{
+    const btn = document.createElement('div');
+    btn.className = 'key';
+    btn.innerHTML = `${def.name}<span class="shape-tag">${key}</span>`;
+    attachKeyDragHandlers(btn, key);
+    pad.appendChild(btn);
+  });
+}
+
+function currentModule(){ return modules[activeModuleId]; }
+
+function syncActiveInput(){
+  const el = document.activeElement;
+  if(el && el.classList && el.classList.contains('label-input') && el.dataset.id){
+    const found = locateBlock(Number(el.dataset.id), currentModule().blocks);
+    if(found) found.block.label = el.value;
+  }
+}
+
+function newBlock(typeKey){
+  const def = TYPES[typeKey];
+  const b = { id: uid++, type: typeKey, label: def.needsLabel ? '' : null, callTarget: null };
+  if(def.slotDefs){
+    b.slots = def.slotDefs.map(sd => ({ key: sd.key, label: sd.label, cls: sd.cls, list: [] }));
+  }
+  if(def.isSwitch){
+    b.cases = [
+      { id: uid++, value: '', list: [] },
+      { id: uid++, value: '', list: [] }
+    ];
+    b.defaultList = [];
+  }
+  return b;
+}
+
+// ===== COPIAR Y PEGAR BLOQUES (uno solo, o un grupo de varios seleccionados) =====
+let clipboardBlocks = null; // arreglo de bloques (cada uno con su subárbol) listos para pegar, en orden
+let selectionMode = false;
+let selectedBlockIds = new Set();
+
+// Clona un bloque y todo su contenido (ramas/cuerpos anidados) asignando IDs nuevos,
+// para que cada copia pegada sea independiente y no choque con los bloques existentes.
+function deepCloneBlock(b){
+  const clone = { id: uid++, type: b.type, label: b.label, callTarget: b.callTarget };
+  if(b.slots){
+    clone.slots = b.slots.map(slot => ({
+      key: slot.key, label: slot.label, cls: slot.cls,
+      list: slot.list.map(deepCloneBlock)
+    }));
+  }
+  if(b.cases){
+    clone.cases = b.cases.map(c => ({ id: uid++, value: c.value, list: c.list.map(deepCloneBlock) }));
+    clone.defaultList = (b.defaultList||[]).map(deepCloneBlock);
+  }
+  return clone;
+}
+
+function copyBlock(id, btnEl){
+  const found = locateBlock(id, currentModule().blocks);
+  if(!found) return;
+  clipboardBlocks = [deepCloneBlock(found.block)];
+  updatePasteIndicator();
+  if(btnEl){
+    btnEl.classList.add('just-copied');
+    btnEl.textContent = '✓';
+    setTimeout(()=>{ btnEl.classList.remove('just-copied'); btnEl.textContent = '⧉'; }, 700);
+  }
+}
+
+function pasteBlock(){
+  if(!clipboardBlocks || clipboardBlocks.length===0) return;
+  insertionTarget.push(...clipboardBlocks.map(deepCloneBlock));
+  render();
+}
+
+function updatePasteIndicator(){
+  const btn = document.getElementById('pasteBtn');
+  if(!clipboardBlocks || clipboardBlocks.length===0){
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'block';
+  if(clipboardBlocks.length===1){
+    const def = TYPES[clipboardBlocks[0].type];
+    btn.textContent = `📋 Pegar "${def.name}" copiado aquí (en: ${insertionLabel})`;
+  } else {
+    btn.textContent = `📋 Pegar grupo de ${clipboardBlocks.length} bloques aquí (en: ${insertionLabel})`;
+  }
+}
+
+// ===== SELECCIONAR VARIOS BLOQUES SUELTOS PARA COPIARLOS COMO GRUPO =====
+function toggleSelectionMode(){
+  selectionMode = !selectionMode;
+  if(!selectionMode) selectedBlockIds.clear();
+  updateSelectionUI();
+  render();
+}
+
+function toggleBlockSelected(id){
+  if(selectedBlockIds.has(id)) selectedBlockIds.delete(id);
+  else selectedBlockIds.add(id);
+  updateSelectionUI();
+  document.querySelectorAll('.block-wrap').forEach(w=>{
+    w.classList.toggle('selected', selectedBlockIds.has(Number(w.dataset.blockid)));
+  });
+}
+
+function updateSelectionUI(){
+  const btn = document.getElementById('selectModeBtn');
+  btn.classList.toggle('active', selectionMode);
+  btn.textContent = selectionMode ? '✕ Cancelar selección múltiple' : '☑ Seleccionar varios bloques';
+  document.body.classList.toggle('selection-mode', selectionMode);
+  const bar = document.getElementById('selectionBar');
+  bar.style.display = selectionMode ? 'flex' : 'none';
+  document.getElementById('selectionCount').textContent = `${selectedBlockIds.size} seleccionado(s)`;
+  document.getElementById('copySelectionBtn').disabled = selectedBlockIds.size===0;
+}
+
+async function copySelection(){
+  if(selectedBlockIds.size===0) return;
+  const found = [...selectedBlockIds].map(id=> locateBlock(id, currentModule().blocks)).filter(Boolean);
+  if(found.length===0) return;
+  const list0 = found[0].list;
+  const allSameList = found.every(f=> f.list===list0);
+  if(!allSameList){
+    await showAlertModal('Selección no válida', 'Los bloques que selecciones para copiar como grupo deben estar todos en la misma secuencia o rama — no puedes mezclar bloques de ramas o cuerpos distintos.');
+    return;
+  }
+  found.sort((a,b)=> a.index - b.index);
+  clipboardBlocks = found.map(f=> deepCloneBlock(f.block));
+  selectionMode = false;
+  selectedBlockIds.clear();
+  updateSelectionUI();
+  updatePasteIndicator();
+  render();
+}
+
+
+// Crea una instancia de bloque, validando el caso especial "Llamar módulo".
+// Devuelve null (y muestra una alerta) si no se puede crear.
+async function createBlockInstance(typeKey){
+  const def = TYPES[typeKey];
+  if(def.isCall){
+    const otherModules = moduleOrder.filter(id=>id!==activeModuleId);
+    if(otherModules.length===0){
+      await showAlertModal('Falta un módulo', 'Primero crea otro módulo para poder llamarlo (botón "+ nuevo módulo").');
+      return null;
+    }
+  }
+  const b = newBlock(typeKey);
+  if(def.isCall){
+    const otherModules = moduleOrder.filter(id=>id!==activeModuleId);
+    b.callTarget = otherModules[0];
+  }
+  return b;
+}
+
+async function addBlock(typeKey){
+  syncActiveInput();
+  const b = await createBlockInstance(typeKey);
+  if(!b) return;
+  insertionTarget.push(b);
+  render();
+}
+
+// ===== ARRASTRAR UN SÍMBOLO DESDE EL TECLADO PARA COLOCARLO EXACTAMENTE DONDE SE SUELTA =====
+function attachKeyDragHandlers(keyEl, typeKey){
+  const THRESHOLD = 6;
+  keyEl.addEventListener('pointerdown', (e)=>{
+    const startX = e.clientX, startY = e.clientY;
+    let dragStarted = false;
+
+    const onMove = (ev)=>{
+      if(dragStarted){ onDragMove(ev); return; }
+      const dx = ev.clientX-startX, dy = ev.clientY-startY;
+      if(Math.hypot(dx,dy) > THRESHOLD){
+        dragStarted = true;
+        beginDragVisualsForNewBlock(ev, typeKey);
+      }
+    };
+    const onUp = (ev)=>{
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      if(dragStarted){
+        onDragEnd(ev);
+      } else {
+        // fue un toque/clic simple: se agrega en el punto de inserción activo, como antes
+        addBlock(typeKey);
+      }
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+function beginDragVisualsForNewBlock(e, typeKey){
+  const def = TYPES[typeKey];
+  const ghost = document.createElement('div');
+  ghost.className = `block ${def.shape} ${def.extraClass||''} drag-ghost`.trim();
+  ghost.style.width = '190px';
+  ghost.innerHTML = `<span class="tag">${def.name}</span><span>${def.name}</span>`;
+  document.body.appendChild(ghost);
+  positionGhost(ghost, e.clientX, e.clientY);
+  document.body.classList.add('dragging-active');
+
+  dragState = { blockId:null, newType: typeKey, ghost, sourceRow:null, hoverTarget:null, hoverIsTrash:false, insertIndex:null };
+}
+
+
+
+function locateBlock(id, list){
+  for(let i=0;i<list.length;i++){
+    if(list[i].id===id) return { list, index:i, block:list[i] };
+    if(list[i].slots){
+      for(const slot of list[i].slots){
+        const r = locateBlock(id, slot.list);
+        if(r) return r;
+      }
+    }
+    if(list[i].cases){
+      for(const c of list[i].cases){
+        const r = locateBlock(id, c.list);
+        if(r) return r;
+      }
+      const r = locateBlock(id, list[i].defaultList);
+      if(r) return r;
+    }
+  }
+  return null;
+}
+
+function updateLabel(id, val){
+  const found = locateBlock(id, currentModule().blocks);
+  if(found) found.block.label = val;
+  updatePseudo();
+}
+function updateCallTarget(id, val){
+  const found = locateBlock(id, currentModule().blocks);
+  if(found) found.block.callTarget = val;
+  updatePseudo();
+}
+
+function setInsertionTarget(list, label){
+  insertionTarget = list;
+  insertionLabel = label;
+  reapplyActiveHighlight();
+}
+function updateInsertIndicator(){
+  document.getElementById('insertIndicator').textContent = `Agregando en: ${insertionLabel}`;
+  updatePasteIndicator();
+}
+function reapplyActiveHighlight(){
+  document.querySelectorAll('.branch.active-target').forEach(x=>x.classList.remove('active-target'));
+  const canvasEl = document.getElementById('canvas');
+  const chip = document.getElementById('rootTargetChip');
+  canvasEl.classList.remove('root-active');
+  chip.classList.remove('active-target');
+  document.querySelectorAll('.block-list-inner').forEach(el=>{
+    if(el._list === insertionTarget){
+      const branchAncestor = el.closest('.branch');
+      if(branchAncestor) branchAncestor.classList.add('active-target');
+      else { canvasEl.classList.add('root-active'); chip.classList.add('active-target'); }
+    }
+  });
+  updateInsertIndicator();
+}
+
+// ===== MODAL PROPIO (reemplaza prompt()/confirm() nativos, que pueden bloquearse en vistas incrustadas) =====
+function showAlertModal(title, message){
+  return new Promise((resolve)=>{
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-box">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          <div class="modal-actions">
+            <button class="modal-btn-primary" id="modalOkOnly">Entendido</button>
+          </div>
+        </div>
+      </div>`;
+    const finish = ()=>{ root.innerHTML=''; resolve(); };
+    document.getElementById('modalOkOnly').addEventListener('click', finish);
+  });
+}
+function showPromptModal(title, message, defaultValue){
+  return new Promise((resolve)=>{
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-box">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          <input type="text" id="modalInput" value="${(defaultValue||'').replace(/"/g,'&quot;')}">
+          <div class="modal-actions">
+            <button class="modal-btn-secondary" id="modalCancel">Cancelar</button>
+            <button class="modal-btn-primary" id="modalOk">Aceptar</button>
+          </div>
+        </div>
+      </div>`;
+    const input = document.getElementById('modalInput');
+    input.focus();
+    input.select();
+    const finish = (val)=>{ root.innerHTML=''; resolve(val); };
+    document.getElementById('modalOk').addEventListener('click', ()=> finish(input.value));
+    document.getElementById('modalCancel').addEventListener('click', ()=> finish(null));
+    input.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') finish(input.value);
+      if(e.key==='Escape') finish(null);
+    });
+  });
+}
+function showConfirmModal(title, message, confirmLabel, confirmClass){
+  confirmLabel = confirmLabel || 'Eliminar';
+  confirmClass = confirmClass || 'modal-btn-danger';
+  return new Promise((resolve)=>{
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-box">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          <div class="modal-actions">
+            <button class="modal-btn-secondary" id="modalNo">Cancelar</button>
+            <button class="${confirmClass}" id="modalYes">${confirmLabel}</button>
+          </div>
+        </div>
+      </div>`;
+    const finish = (val)=>{ root.innerHTML=''; resolve(val); };
+    document.getElementById('modalYes').addEventListener('click', ()=> finish(true));
+    document.getElementById('modalNo').addEventListener('click', ()=> finish(false));
+  });
+}
+
+async function addModule(){
+  syncActiveInput();
+  const name = await showPromptModal('Nuevo módulo', 'Nombre del nuevo módulo (subprograma):', `Módulo ${moduleOrder.length}`);
+  if(!name || !name.trim()) return;
+  const id = 'm' + (uid++);
+  modules[id] = { name: name.trim(), blocks:[] };
+  moduleOrder.push(id);
+  activeModuleId = id;
+  setInsertionTarget(modules[id].blocks, modules[id].name);
+  render();
+}
+async function deleteModule(id){
+  syncActiveInput();
+  if(id==='principal') return;
+  const ok = await showConfirmModal('Eliminar módulo', `¿Eliminar el módulo "${modules[id].name}"? Las llamadas a este módulo quedarán rotas.`);
+  if(!ok) return;
+  delete modules[id];
+  moduleOrder = moduleOrder.filter(m=>m!==id);
+  if(activeModuleId===id){
+    activeModuleId='principal';
+    setInsertionTarget(modules.principal.blocks, modules.principal.name);
+  }
+  render();
+}
+function switchModule(id){
+  syncActiveInput();
+  activeModuleId = id;
+  setInsertionTarget(modules[id].blocks, modules[id].name);
+  render();
+}
+
+function renderTabs(){
+  const wrap = document.getElementById('moduleTabs');
+  wrap.innerHTML = '';
+  moduleOrder.forEach(id=>{
+    const tab = document.createElement('div');
+    tab.className = 'mtab' + (id===activeModuleId ? ' active' : '');
+    tab.innerHTML = escapeHtml(modules[id].name) + (id!=='principal' ? ' <span class="del">×</span>' : '');
+    tab.onclick = (e)=>{
+      if(e.target.classList.contains('del')){ deleteModule(id); return; }
+      switchModule(id);
+    };
+    wrap.appendChild(tab);
+  });
+  const addTab = document.createElement('div');
+  addTab.className = 'mtab add';
+  addTab.textContent = '+ nuevo módulo';
+  addTab.onclick = addModule;
+  wrap.appendChild(addTab);
+  document.getElementById('moduleCanvasLabel').textContent = `— ${modules[activeModuleId].name}`;
+}
+
+function renderBlockRow(b){
+  const def = TYPES[b.type];
+  const row = document.createElement('div');
+  row.className = 'block-row';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'block-wrap';
+  wrap.dataset.blockid = b.id;
+  if(selectedBlockIds.has(b.id)) wrap.classList.add('selected');
+  wrap.addEventListener('click', (e)=>{
+    if(!selectionMode) return;
+    e.stopPropagation();
+    toggleBlockSelected(b.id);
+  });
+
+  const el = document.createElement('div');
+  el.className = `block ${def.shape} ${def.extraClass||''}`.trim();
+
+  let inner = `<span>${def.name}${(def.needsLabel||def.isCall) ? ':' : ''}</span>`;
+  if(def.needsLabel){
+    inner += `<textarea class="label-input" rows="1" placeholder="${escapeHtml(def.placeholder||'')}" data-id="${b.id}">${escapeHtml(b.label||'')}</textarea>`;
+  }
+  if(def.isCall){
+    const options = moduleOrder.filter(id=>id!==activeModuleId)
+      .map(id=>`<option value="${id}" ${b.callTarget===id?'selected':''}>${escapeHtml(modules[id].name)}</option>`).join('');
+    inner += `<select class="label-select" data-callid="${b.id}">${options}</select>`;
+  }
+  el.innerHTML = inner;
+  wrap.appendChild(el);
+
+  // El gafete y el botón de copiar van FUERA de la figura (que tiene clip-path),
+  // para que no pierdan los clics al sobresalir del contorno recortado.
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = def.name;
+  wrap.appendChild(tag);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'copy-btn';
+  copyBtn.title = 'Copiar este bloque';
+  copyBtn.textContent = '⧉';
+  copyBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    copyBlock(b.id, copyBtn);
+  });
+  wrap.appendChild(copyBtn);
+
+  row.appendChild(wrap);
+
+  const inp = el.querySelector('.label-input');
+  if(inp){
+    inp.addEventListener('input', e=>{
+      updateLabel(Number(e.target.dataset.id), e.target.value);
+      autoResizeTextarea(e.target);
+    });
+  }
+  const sel = el.querySelector('.label-select');
+  if(sel){
+    sel.addEventListener('change', e=> updateCallTarget(Number(e.target.dataset.callid), e.target.value));
+  }
+
+  attachDragHandlers(row, b.id);
+
+  return row;
+}
+
+// Hace crecer el <textarea> de cada bloque en altura según su contenido,
+// para que el texto largo se acomode en varias líneas en vez de recortarse.
+function autoResizeTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function attachDragHandlers(row, blockId){
+  const THRESHOLD = 6;
+  row.addEventListener('pointerdown', (e)=>{
+    if(selectionMode) return;
+    if(e.target.tagName==='SELECT' || e.target.tagName==='OPTION' || e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA' || e.target.closest('.copy-btn')) return;
+    const startX = e.clientX, startY = e.clientY;
+    let dragStarted = false;
+
+    const onMove = (ev)=>{
+      if(dragStarted){ onDragMove(ev); return; }
+      const dx = ev.clientX-startX, dy = ev.clientY-startY;
+      if(Math.hypot(dx,dy) > THRESHOLD){
+        dragStarted = true;
+        if(document.activeElement && row.contains(document.activeElement)) document.activeElement.blur();
+        beginDragVisuals(ev, blockId, row);
+      }
+    };
+    const onUp = (ev)=>{
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      if(dragStarted) onDragEnd(ev);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+// Crea el "abanico" de líneas de flujo que va del símbolo de decisión/ciclo hacia
+// cada rama (kind='top') o de las ramas de vuelta hacia el tronco principal (kind='bottom').
+// Las líneas son SVG con esquinas redondeadas (rutas ortogonales estilo Lucidchart, no
+// ángulos rectos secos). No mide nada por JS: como cada carril reparte el ancho igual
+// que las cajas de rama (mismo criterio de "N carriles iguales"), el centro del carril i
+// siempre cae en ((i+0.5)/N)*100%, así que basta esa fracción para dibujar cada ruta.
+// Las flechas van aparte como triángulos CSS (tamaño fijo), para que no se deformen
+// al estirar el SVG a lo ancho.
+function makeFlowFan(kind, laneCount){
+  const H = 26;          // alto del abanico, en las mismas unidades que el viewBox
+  const nearBranch = 9;  // separación entre la barra y el borde pegado a las ramas
+  const barY = kind==='top' ? (H-nearBranch) : nearBranch;
+  const r = 6;           // radio de las esquinas redondeadas
+
+  const fan = document.createElement('div');
+  fan.className = `flow-fan flow-fan-${kind}` + (laneCount>1 ? ' multi' : '');
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 100 ${H}`);
+  svg.setAttribute('preserveAspectRatio','none');
+  svg.classList.add('ff-svg');
+
+  const paths = [];
+  const arrowXs = []; // posiciones (en %) donde va una flecha apuntando hacia abajo
+
+  if(laneCount <= 1){
+    paths.push(`M50,0 L50,${H}`);
+    arrowXs.push(50);
+  } else {
+    for(let i=0;i<laneCount;i++){
+      const x2 = ((i+0.5)/laneCount)*100;
+      const dir = x2>50 ? 1 : -1;
+      if(kind==='top'){
+        paths.push(`M50,0 L50,${barY-r} Q50,${barY} ${50+dir*r},${barY} L${x2-dir*r},${barY} Q${x2},${barY} ${x2},${barY+r} L${x2},${H}`);
+        arrowXs.push(x2);
+      } else {
+        paths.push(`M${x2},0 L${x2},${barY-r} Q${x2},${barY} ${x2-dir*r},${barY} L${50+dir*r},${barY} Q50,${barY} 50,${barY+r} L50,${H}`);
+      }
+    }
+    if(kind==='bottom') arrowXs.push(50); // una sola flecha de salida, al converger
+  }
+
+  svg.innerHTML = paths.map(d=>`<path class="ff-line" d="${d}"/>`).join('');
+  fan.appendChild(svg);
+
+  arrowXs.forEach(x=>{
+    const arrow = document.createElement('div');
+    arrow.className = 'ff-arrow';
+    arrow.style.left = x + '%';
+    fan.appendChild(arrow);
+  });
+
+  if(laneCount > 1){
+    const mobileLine = document.createElement('div');
+    mobileLine.className = 'ff-mobile-line';
+    fan.appendChild(mobileLine);
+  }
+
+  return fan;
+}
+
+// Dibuja, dentro de un contenedor (la caja de una rama-cuerpo de ciclo, o el grupo
+// completo de un Hacer-Mientras), la flechita curva que indica que el flujo regresa
+// a evaluar la condición (se repite). Se escala solo por viewBox.
+function addLoopBackArrow(el){
+  el.classList.add('has-loop-arrow');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 20 100');
+  svg.setAttribute('preserveAspectRatio','none');
+  svg.classList.add('loop-back-svg');
+  svg.innerHTML =
+    '<path class="loop-back-path" d="M6,8 C 18,8 18,92 6,92" fill="none" stroke-width="2"/>' +
+    '<polygon class="loop-back-arrow" points="6,2 0,11 13,11"/>';
+  el.appendChild(svg);
+}
+
+function renderBlockList(list, container, isBranch){
+  container._list = list;
+  container.innerHTML = '';
+  if(list.length===0){
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint-small';
+    hint.textContent = isBranch ? 'Arrastra bloques aquí' : 'Toca aquí y agrega Inicio para comenzar';
+    container.appendChild(hint);
+    return;
+  }
+  list.forEach((b, idx)=>{
+    if(idx>0 || isBranch){
+      const conn = document.createElement('div');
+      conn.className = 'connector';
+      container.appendChild(conn);
+    }
+    const def = TYPES[b.type];
+
+    if(b.type === 'hacermientras'){
+      // Hacer-Mientras: el cuerpo se ejecuta SIEMPRE primero (al menos 1 vez) y la
+      // condición se evalúa AL FINAL, así que el símbolo del ciclo va DESPUÉS de su
+      // cuerpo (no antes, como en Para/Mientras). El grupo entero queda envuelto para
+      // que la flecha de retorno vaya del final (la condición) al inicio (el cuerpo).
+      const slot = b.slots[0];
+      const group = document.createElement('div');
+      group.className = 'hacer-mientras-group';
+
+      const box = document.createElement('div');
+      box.className = `branch ${slot.cls}`;
+      box.innerHTML = `<div class="branch-label">${slot.label}</div>`;
+      const innerList = document.createElement('div');
+      innerList.className = 'block-list-inner';
+      box.appendChild(innerList);
+      group.appendChild(box);
+
+      renderBlockList(slot.list, innerList, true);
+
+      box.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        setInsertionTarget(slot.list, `${modules[activeModuleId].name} → ${def.name}: ${slot.label}`);
+      });
+
+      group.appendChild(makeFlowFan('bottom', 1));
+      group.appendChild(renderBlockRow(b));
+      addLoopBackArrow(group);
+
+      container.appendChild(group);
+      return;
+    }
+
+    const row = renderBlockRow(b);
+    container.appendChild(row);
+
+    if(def.slotDefs){
+      container.appendChild(makeFlowFan('top', b.slots.length));
+
+      const branchesWrap = document.createElement('div');
+      branchesWrap.className = 'branches';
+
+      b.slots.forEach(slot=>{
+        const box = document.createElement('div');
+        box.className = `branch ${slot.cls}`;
+        box.innerHTML = `<div class="branch-label">${slot.label}</div>`;
+        const innerList = document.createElement('div');
+        innerList.className = 'block-list-inner';
+        box.appendChild(innerList);
+        branchesWrap.appendChild(box);
+
+        renderBlockList(slot.list, innerList, true);
+
+        if(slot.cls === 'branch-loop') addLoopBackArrow(box);
+
+        box.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          setInsertionTarget(slot.list, `${modules[activeModuleId].name} → ${def.name}: ${slot.label}`);
+        });
+      });
+
+      container.appendChild(branchesWrap);
+      container.appendChild(makeFlowFan('bottom', b.slots.length));
+    } else if(def.isSwitch){
+      renderSwitchCases(b, container, def);
+    }
+  });
+}
+
+// Dibuja las ramas dinámicas de un bloque "Según" (selectiva múltiple): un caso por
+// cada valor definido, un botón para agregar más casos, y la rama "Otro / Ninguno coincide".
+function renderSwitchCases(b, container, def){
+  container.appendChild(makeFlowFan('top', b.cases.length + 1));
+
+  const branchesWrap = document.createElement('div');
+  branchesWrap.className = 'branches';
+
+  b.cases.forEach((c, idx)=>{
+    const box = document.createElement('div');
+    box.className = 'branch branch-case';
+
+    const header = document.createElement('div');
+    header.className = 'case-header';
+    const valInput = document.createElement('input');
+    valInput.className = 'case-value-input';
+    valInput.placeholder = `valor caso ${idx+1}, ej. "Economía"`;
+    valInput.value = c.value || '';
+    valInput.addEventListener('click', e=> e.stopPropagation());
+    valInput.addEventListener('input', e=>{ c.value = e.target.value; updatePseudo(); });
+    header.appendChild(valInput);
+
+    if(b.cases.length > 1){
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'case-del-btn';
+      delBtn.title = 'Eliminar este caso';
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', e=>{
+        e.stopPropagation();
+        b.cases.splice(idx, 1);
+        render();
+      });
+      header.appendChild(delBtn);
+    }
+    box.appendChild(header);
+
+    const innerList = document.createElement('div');
+    innerList.className = 'block-list-inner';
+    box.appendChild(innerList);
+    branchesWrap.appendChild(box);
+
+    renderBlockList(c.list, innerList, true);
+
+    box.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      setInsertionTarget(c.list, `${modules[activeModuleId].name} → ${def.name}: caso "${c.value||'(sin valor)'}"`);
+    });
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'add-case-btn';
+  addBtn.textContent = '+ agregar caso';
+  addBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    b.cases.push({ id: uid++, value: '', list: [] });
+    render();
+  });
+  branchesWrap.appendChild(addBtn);
+
+  const defBox = document.createElement('div');
+  defBox.className = 'branch branch-default';
+  defBox.innerHTML = `<div class="branch-label">Otro / ninguno coincide</div>`;
+  const defInner = document.createElement('div');
+  defInner.className = 'block-list-inner';
+  defBox.appendChild(defInner);
+  branchesWrap.appendChild(defBox);
+
+  renderBlockList(b.defaultList, defInner, true);
+
+  defBox.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    setInsertionTarget(b.defaultList, `${modules[activeModuleId].name} → ${def.name}: otro/ninguno`);
+  });
+
+  container.appendChild(branchesWrap);
+  container.appendChild(makeFlowFan('bottom', b.cases.length + 1));
+}
+
+function render(opts){
+  opts = opts || {};
+  renderTabs();
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = '';
+  const rootWrap = document.createElement('div');
+  rootWrap.className = 'block-list-inner root-list';
+  canvas.appendChild(rootWrap);
+  renderBlockList(currentModule().blocks, rootWrap, false);
+
+  // Ahora que todos los bloques ya están conectados al documento, se ajusta
+  // la altura de cada textarea según su contenido (medirlo antes daría 0).
+  canvas.querySelectorAll('.label-input').forEach(autoResizeTextarea);
+
+  setLED('amber');
+  if(!opts.skipPseudoRegen) updatePseudo();
+  reapplyActiveHighlight();
+  layoutFlowVisuals();
+}
+
+// Redibuja las líneas de flujo (abanicos multi-carril y flechas de retorno de ciclo)
+// usando medidas REALES en píxeles (getBoundingClientRect), en vez de un viewBox
+// porcentual — así el radio de las curvas es uniforme de verdad y no sale deformado
+// (una curva "redondeada" que en realidad era una elipse aplastada por estirar el
+// ancho con porcentajes pero el alto en píxeles fijos).
+function layoutFlowVisuals(){
+  document.querySelectorAll('.flow-fan.multi').forEach(fan=>{
+    const kind = fan.classList.contains('flow-fan-top') ? 'top' : 'bottom';
+    const branches = kind==='top' ? fan.nextElementSibling : fan.previousElementSibling;
+    if(!branches || !branches.classList.contains('branches')) return;
+    const fanRect = fan.getBoundingClientRect();
+    const W = fanRect.width, H = fanRect.height;
+    if(W<=0 || H<=0) return;
+    const laneEls = Array.from(branches.children).filter(c=>c.classList.contains('branch'));
+    if(laneEls.length===0) return;
+    const centers = laneEls.map(el=>{
+      const r = el.getBoundingClientRect();
+      return (r.left + r.width/2) - fanRect.left;
+    });
+    redrawFan(fan, kind, centers, W, H);
+  });
+  document.querySelectorAll('.loop-back-svg').forEach(redrawLoopBackArrow);
+}
+
+function redrawFan(fan, kind, centers, W, H){
+  const svg = fan.querySelector('.ff-svg');
+  if(!svg) return;
+  const cx = W/2;
+  const nearBranch = Math.min(9, H/3);
+  const r = Math.min(9, H/3, W/8);
+  const barY = kind==='top' ? (H-nearBranch) : nearBranch;
+  const paths = [];
+  const arrowXs = [];
+  centers.forEach(x2=>{
+    const dir = x2>cx ? 1 : (x2<cx ? -1 : 0);
+    if(dir===0){
+      paths.push(`M${cx},0 L${cx},${H}`);
+      if(kind==='top') arrowXs.push(cx);
+      return;
+    }
+    if(kind==='top'){
+      paths.push(`M${cx},0 L${cx},${barY-r} Q${cx},${barY} ${cx+dir*r},${barY} L${x2-dir*r},${barY} Q${x2},${barY} ${x2},${barY+r} L${x2},${H}`);
+      arrowXs.push(x2);
+    } else {
+      paths.push(`M${x2},0 L${x2},${barY-r} Q${x2},${barY} ${x2-dir*r},${barY} L${cx+dir*r},${barY} Q${cx},${barY} ${cx},${barY+r} L${cx},${H}`);
+    }
+  });
+  if(kind==='bottom') arrowXs.push(cx);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.removeAttribute('preserveAspectRatio'); // ya es 1:1 en píxeles reales, no hace falta
+  svg.innerHTML = paths.map(d=>`<path class="ff-line" d="${d}"/>`).join('');
+
+  fan.querySelectorAll('.ff-arrow').forEach(a=>a.remove());
+  arrowXs.forEach(x=>{
+    const arrow = document.createElement('div');
+    arrow.className = 'ff-arrow';
+    arrow.style.left = x + 'px';
+    fan.appendChild(arrow);
+  });
+}
+
+function redrawLoopBackArrow(svg){
+  const w = svg.clientWidth, h = svg.clientHeight;
+  if(w<=0 || h<=0) return;
+  const x0 = w*0.32;
+  const bulge = w*0.85;
+  const topY = Math.min(10, h*0.15);
+  const botY = h - Math.min(10, h*0.15);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.removeAttribute('preserveAspectRatio');
+  svg.innerHTML =
+    `<path class="loop-back-path" d="M${x0},${topY} C ${x0+bulge},${topY} ${x0+bulge},${botY} ${x0},${botY}" fill="none" stroke-width="2"/>` +
+    `<polygon class="loop-back-arrow" points="${x0},${Math.max(0,topY-6)} ${x0-6},${topY+5} ${x0+6},${topY+5}"/>`;
+}
+
+let flowVisualsResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(flowVisualsResizeTimer);
+  flowVisualsResizeTimer = setTimeout(layoutFlowVisuals, 150);
+});
+
+function setLED(state){
+  ['red','amber','green'].forEach(c=>{
+    document.getElementById(`led-${c}`).classList.toggle(`on-${c}`, c===state);
+  });
+}
+
+// ===== DRAG & DROP (pointer events: funciona con mouse y con dedo) =====
+let dragState = null;
+
+function beginDragVisuals(e, blockId, rowEl){
+  const rect = rowEl.getBoundingClientRect();
+  const ghost = rowEl.cloneNode(true);
+  ghost.classList.add('drag-ghost');
+  ghost.style.width = rect.width + 'px';
+  document.body.appendChild(ghost);
+  positionGhost(ghost, e.clientX, e.clientY);
+
+  rowEl.classList.add('dragging-source');
+  document.body.classList.add('dragging-active');
+
+  dragState = { blockId, ghost, sourceRow: rowEl, hoverTarget:null, hoverIsTrash:false, insertIndex:null };
+}
+function positionGhost(ghost, x, y){
+  ghost.style.left = (x - ghost.offsetWidth/2) + 'px';
+  ghost.style.top = (y - 24) + 'px';
+}
+function clearDropHighlights(){
+  document.querySelectorAll('.dropzone-highlight').forEach(x=>x.classList.remove('dropzone-highlight'));
+  const trash = document.getElementById('trashZone');
+  if(trash) trash.classList.remove('drop-hover');
+}
+function computeInsertIndex(listEl, y){
+  // Los bloques Hacer-Mientras se envuelven en un ".hacer-mientras-group" (para poder
+  // dibujar el cuerpo antes que la condición), así que también cuentan como "fila"
+  // de referencia al calcular dónde soltar un bloque arrastrado.
+  const rows = Array.from(listEl.children).filter(c=>c.classList.contains('block-row') || c.classList.contains('hacer-mientras-group'));
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i].getBoundingClientRect();
+    if(y < r.top + r.height/2) return i;
+  }
+  return rows.length;
+}
+function isListWithinSubtree(list, block){
+  if(block.slots){
+    for(const slot of block.slots){
+      if(slot.list===list) return true;
+      for(const sub of slot.list){ if(isListWithinSubtree(list, sub)) return true; }
+    }
+  }
+  if(block.cases){
+    for(const c of block.cases){
+      if(c.list===list) return true;
+      for(const sub of c.list){ if(isListWithinSubtree(list, sub)) return true; }
+    }
+    if(block.defaultList===list) return true;
+    for(const sub of block.defaultList){ if(isListWithinSubtree(list, sub)) return true; }
+  }
+  return false;
+}
+function isValidDropList(list, draggedId){
+  const found = locateBlock(draggedId, currentModule().blocks);
+  if(!found) return true;
+  return !isListWithinSubtree(list, found.block);
+}
+function onDragMove(ev){
+  if(!dragState) return;
+  positionGhost(dragState.ghost, ev.clientX, ev.clientY);
+
+  dragState.ghost.style.display = 'none';
+  const elUnder = document.elementFromPoint(ev.clientX, ev.clientY);
+  dragState.ghost.style.display = '';
+
+  const trash = document.getElementById('trashZone');
+  const overTrash = trash && elUnder && (elUnder===trash || trash.contains(elUnder));
+  clearDropHighlights();
+
+  if(overTrash){
+    trash.classList.add('drop-hover');
+    dragState.hoverIsTrash = true;
+    dragState.hoverTarget = null;
+    return;
+  }
+  dragState.hoverIsTrash = false;
+
+  const listEl = elUnder ? elUnder.closest('.block-list-inner') : null;
+  let targetListEl = listEl;
+  if(!targetListEl){
+    const canvasEl = document.getElementById('canvas');
+    const rect = canvasEl.getBoundingClientRect();
+    if(ev.clientX>=rect.left && ev.clientX<=rect.right && ev.clientY>=rect.top && ev.clientY<=rect.bottom){
+      targetListEl = canvasEl.querySelector('.block-list-inner.root-list');
+    }
+  }
+  if(targetListEl && targetListEl._list && (dragState.newType || isValidDropList(targetListEl._list, dragState.blockId))){
+    targetListEl.classList.add('dropzone-highlight');
+    dragState.hoverTarget = targetListEl;
+    dragState.insertIndex = computeInsertIndex(targetListEl, ev.clientY);
+  } else {
+    dragState.hoverTarget = null;
+  }
+}
+async function onDragEnd(ev){
+  if(!dragState) return;
+  syncActiveInput();
+  const { blockId, newType, ghost, sourceRow, hoverTarget, hoverIsTrash, insertIndex } = dragState;
+  ghost.remove();
+  if(sourceRow) sourceRow.classList.remove('dragging-source');
+  document.body.classList.remove('dragging-active');
+  clearDropHighlights();
+
+  if(newType){
+    // Arrastre de un símbolo nuevo desde el teclado: se crea justo en el punto donde se soltó.
+    dragState = null;
+    if(!hoverIsTrash && hoverTarget && hoverTarget._list){
+      const b = await createBlockInstance(newType);
+      if(b){
+        const targetList = hoverTarget._list;
+        const idx = insertIndex==null ? targetList.length : insertIndex;
+        targetList.splice(idx, 0, b);
+      }
+    }
+    render();
+    return;
+  }
+
+  const found = locateBlock(blockId, currentModule().blocks);
+  if(found){
+    if(hoverIsTrash){
+      found.list.splice(found.index, 1);
+    } else if(hoverTarget && hoverTarget._list){
+      const targetList = hoverTarget._list;
+      let idx = insertIndex==null ? targetList.length : insertIndex;
+      found.list.splice(found.index, 1);
+      if(targetList===found.list && idx>found.index) idx--;
+      targetList.splice(idx, 0, found.block);
+    }
+  }
+  dragState = null;
+  render();
+}
+
+// ===== PSEUDOCÓDIGO (recursivo) =====
+function labelOf(b){ return (b.label && b.label.trim()) ? b.label.trim() : '???'; }
+
+function translateList(list, indent){
+  const pad = '  '.repeat(indent);
+  let out = '';
+  list.forEach(b=>{
+    const def = TYPES[b.type];
+    if(def.slotDefs){
+      if(b.type==='condDoble'){
+        out += `${pad}Si (${labelOf(b)}) entonces\n`;
+        out += translateList(b.slots[0].list, indent+1);
+        if(b.slots[1].list.length>0){
+          out += `${pad}Sino\n`;
+          out += translateList(b.slots[1].list, indent+1);
+        }
+        out += `${pad}Fin del condicional\n`;
+      } else if(b.type==='condSimple'){
+        out += `${pad}Si (${labelOf(b)}) entonces\n`;
+        out += translateList(b.slots[0].list, indent+1);
+        out += `${pad}Fin del condicional\n`;
+      } else if(b.type==='hacermientras'){
+        out += `${pad}Hacer\n`;
+        out += translateList(b.slots[0].list, indent+1);
+        out += `${pad}Mientras (${labelOf(b)})\n`;
+        out += `${pad}Fin del ciclo\n`;
+      } else { // para, mientras
+        out += `${pad}${def.pseudo(labelOf(b))}\n`;
+        out += translateList(b.slots[0].list, indent+1);
+        out += `${pad}Fin del ciclo\n`;
+      }
+    } else if(def.isCall){
+      const targetName = modules[b.callTarget] ? modules[b.callTarget].name : '??? (módulo eliminado)';
+      out += `${pad}${def.pseudo(targetName)}\n`;
+    } else if(def.isSwitch){
+      out += `${pad}${def.pseudo(labelOf(b))}\n`;
+      b.cases.forEach(c=>{
+        out += `${pad}  Caso ${c.value && c.value.trim() ? c.value.trim() : '(sin valor)'}:\n`;
+        out += translateList(c.list, indent+2);
+      });
+      if(b.defaultList.length>0){
+        out += `${pad}  Otro caso:\n`;
+        out += translateList(b.defaultList, indent+2);
+      }
+      out += `${pad}Fin según\n`;
+    } else {
+      const label = def.needsLabel ? labelOf(b) : null;
+      const rendered = def.pseudo(label);
+      // Si el texto trae varias líneas (ej. varias asignaciones en un Proceso),
+      // se le pone el mismo sangrado a cada una, no solo a la primera.
+      out += rendered.split('\n').map(line => `${pad}${line}`).join('\n') + '\n';
+    }
+  });
+  return out;
+}
+function updatePseudo(){
+  const out = document.getElementById('pseudoOut');
+  let text = '';
+  moduleOrder.forEach(id=>{
+    const mod = modules[id];
+    text += `Módulo: ${mod.name}\n`;
+    if(mod.blocks.length===0){ text += '  // vacío\n\n'; return; }
+    text += translateList(mod.blocks, 1) + '\n';
+  });
+  out.value = text.trim() || '// vacío —';
+  hidePseudoError();
+}
+function hidePseudoError(){
+  const errEl = document.getElementById('pseudoError');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+}
+function showPseudoError(msg){
+  const errEl = document.getElementById('pseudoError');
+  errEl.textContent = '⚠ ' + msg;
+  errEl.style.display = 'block';
+}
+
+// ===== RECONSTRUIR EL DIAGRAMA A PARTIR DEL TEXTO DEL PSEUDOCÓDIGO =====
+// Analiza el texto línea por línea (usando la sangría) y arma el mismo árbol de
+// bloques/ramas/casos que usa el resto de la app. Exige el formato exacto que la
+// propia app genera; cualquier desvío se reporta como error de sintaxis (con
+// número de línea) en vez de adivinar. Nota: como el texto no distingue entre
+// "un Proceso con 3 líneas" y "3 Procesos de una línea cada uno", cada línea de
+// asignación se reconstruye como su propio bloque de Proceso independiente.
+function parsePseudocodeToModel(text){
+  const rawLines = text.split('\n');
+  const lines = [];
+  rawLines.forEach((raw, i)=>{
+    if(raw.trim()==='') return;
+    const t = raw.trim();
+    if(t.startsWith('//')) return; // "// vacío" u otros comentarios
+    const leadingSpaces = raw.match(/^ */)[0].length;
+    lines.push({ indent: Math.round(leadingSpaces/2), text:t, lineNo:i+1 });
+  });
+
+  let pos = 0;
+  const peek = ()=> lines[pos];
+  const advance = ()=> lines[pos++];
+  function fail(msg, lineNo){
+    const ln = lineNo!=null ? lineNo : (peek() ? peek().lineNo : '(fin del texto)');
+    throw new Error(`Línea ${ln}: ${msg}`);
+  }
+  function expectLine(expectedText, indent){
+    const l = peek();
+    if(!l) fail(`se esperaba "${expectedText}" pero el texto terminó antes de tiempo. ¿Falta cerrar alguna estructura?`);
+    if(l.text!==expectedText || l.indent!==indent) fail(`se esperaba "${expectedText}" (con sangría de nivel ${indent}), pero se encontró "${l.text}".`, l.lineNo);
+    return advance();
+  }
+
+  const callRefs = []; // { block, targetName, lineNo } — se resuelven al final, cuando ya existen todos los módulos
+
+  function parseStatements(indent){
+    const list = [];
+    while(pos<lines.length && lines[pos].indent===indent){
+      const l = lines[pos];
+      const t = l.text;
+      let m;
+      if(t==='Inicio'){ advance(); list.push({id:uid++, type:'inicio', label:null, callTarget:null}); }
+      else if(t==='Fin'){ advance(); list.push({id:uid++, type:'fin', label:null, callTarget:null}); }
+      else if((m=t.match(/^Leer \((.*)\)$/))){ advance(); list.push({id:uid++, type:'entrada', label:m[1], callTarget:null}); }
+      else if((m=t.match(/^Imprimir \((.*)\)$/))){ advance(); list.push({id:uid++, type:'salida', label:m[1], callTarget:null}); }
+      else if((m=t.match(/^Conector (.*) \(misma página\)$/))){ advance(); list.push({id:uid++, type:'conector', label:m[1], callTarget:null}); }
+      else if((m=t.match(/^Conector (.*) \(entre páginas\)$/))){ advance(); list.push({id:uid++, type:'conectorp', label:m[1], callTarget:null}); }
+      else if((m=t.match(/^Llamar módulo: (.*)$/))){
+        advance();
+        const b = {id:uid++, type:'llamar', label:null, callTarget:null};
+        callRefs.push({ block:b, targetName:m[1], lineNo:l.lineNo });
+        list.push(b);
+      }
+      else if((m=t.match(/^Si \((.*)\) entonces$/))){
+        const condLineNo = l.lineNo;
+        advance();
+        const cond = m[1];
+        const trueList = parseStatements(indent+1);
+        let falseList = [], hasElse = false;
+        if(peek() && peek().indent===indent && peek().text==='Sino'){
+          advance(); hasElse = true;
+          falseList = parseStatements(indent+1);
+        }
+        expectLine('Fin del condicional', indent);
+        if(!cond.trim()) fail('el "Si (...)" no puede tener la condición vacía.', condLineNo);
+        if(hasElse){
+          list.push({id:uid++, type:'condDoble', label:cond, callTarget:null, slots:[
+            {key:'true', label:'Verdadero (Si)', cls:'branch-true', list:trueList},
+            {key:'false', label:'Falso (No)', cls:'branch-false', list:falseList}
+          ]});
+        } else {
+          list.push({id:uid++, type:'condSimple', label:cond, callTarget:null, slots:[
+            {key:'true', label:'Verdadero (Si) — si es falso, continúa directo', cls:'branch-true', list:trueList}
+          ]});
+        }
+      }
+      else if((m=t.match(/^Repetir mientras \((.*)\) hacer$/))){
+        advance();
+        const body = parseStatements(indent+1);
+        expectLine('Fin del ciclo', indent);
+        list.push({id:uid++, type:'para', label:m[1], callTarget:null, slots:[
+          {key:'body', label:'Cuerpo del ciclo', cls:'branch-loop', list:body}
+        ]});
+      }
+      else if((m=t.match(/^Mientras \((.*)\) repetir$/))){
+        advance();
+        const body = parseStatements(indent+1);
+        expectLine('Fin del ciclo', indent);
+        list.push({id:uid++, type:'mientras', label:m[1], callTarget:null, slots:[
+          {key:'body', label:'Cuerpo del ciclo', cls:'branch-loop', list:body}
+        ]});
+      }
+      else if(t==='Hacer'){
+        advance();
+        const body = parseStatements(indent+1);
+        const condLine = peek();
+        if(!condLine || condLine.indent!==indent || !/^Mientras \((.*)\)$/.test(condLine.text)){
+          fail('un "Hacer" debe cerrarse con "Mientras (condición)" antes del "Fin del ciclo".', condLine?condLine.lineNo:null);
+        }
+        const cm = condLine.text.match(/^Mientras \((.*)\)$/);
+        advance();
+        expectLine('Fin del ciclo', indent);
+        list.push({id:uid++, type:'hacermientras', label:cm[1], callTarget:null, slots:[
+          {key:'body', label:'Cuerpo del ciclo (se ejecuta al menos 1 vez)', cls:'branch-loop', list:body}
+        ]});
+      }
+      else if((m=t.match(/^Según \((.*)\) hacer$/))){
+        const seganoLineNo = l.lineNo;
+        advance();
+        const cases = [];
+        while(peek() && peek().indent===indent+1 && /^Caso (.*):$/.test(peek().text)){
+          const cm = advance().text.match(/^Caso (.*):$/);
+          const value = cm[1]==='(sin valor)' ? '' : cm[1];
+          const cList = parseStatements(indent+2);
+          cases.push({ id:uid++, value, list:cList });
+        }
+        let defaultList = [];
+        if(peek() && peek().indent===indent+1 && peek().text==='Otro caso:'){
+          advance();
+          defaultList = parseStatements(indent+2);
+        }
+        expectLine('Fin según', indent);
+        if(cases.length===0) fail('el bloque "Según" debe tener al menos un "Caso ...:" adentro.', seganoLineNo);
+        list.push({id:uid++, type:'segun', label:m[1], callTarget:null, cases, defaultList});
+      }
+      else {
+        // Cualquier otra línea suelta se reconstruye como su propio bloque de Proceso.
+        advance();
+        list.push({id:uid++, type:'proceso', label:t, callTarget:null});
+      }
+    }
+    return list;
+  }
+
+  const newModules = {};
+  const newModuleOrder = [];
+  if(lines.length===0) fail('el texto está vacío. Debe empezar con "Módulo: <nombre>".', 1);
+
+  while(pos<lines.length){
+    const l = peek();
+    const m = l.text.match(/^Módulo: (.+)$/);
+    if(!m || l.indent!==0) fail(`se esperaba "Módulo: <nombre>" (sin sangría) para iniciar un módulo, pero se encontró "${l.text}".`, l.lineNo);
+    advance();
+    const modId = newModuleOrder.length===0 ? 'principal' : ('m'+(uid++));
+    const blocks = parseStatements(1);
+    newModules[modId] = { name:m[1].trim(), blocks };
+    newModuleOrder.push(modId);
+  }
+
+  callRefs.forEach(({block, targetName, lineNo})=>{
+    const targetId = newModuleOrder.find(id => newModules[id].name===targetName.trim());
+    if(!targetId) fail(`"Llamar módulo: ${targetName}" no coincide con el nombre de ningún módulo definido en el texto.`, lineNo);
+    block.callTarget = targetId;
+  });
+
+  return { modules:newModules, moduleOrder:newModuleOrder };
+}
+
+// Intenta reconstruir el diagrama desde el texto actual del cuadro de pseudocódigo.
+// Si el texto tiene un error de sintaxis, se muestra el error y el diagrama actual
+// se queda tal cual (no se pierde nada hasta que el texto vuelva a ser válido).
+function tryApplyPseudocodeEdit(){
+  const text = document.getElementById('pseudoOut').value;
+  let parsed;
+  try{
+    parsed = parsePseudocodeToModel(text);
+  } catch(e){
+    showPseudoError(e.message);
+    return;
+  }
+  const prevActiveName = modules[activeModuleId] ? modules[activeModuleId].name : null;
+  modules = parsed.modules;
+  moduleOrder = parsed.moduleOrder;
+  const matchByName = moduleOrder.find(id => modules[id].name===prevActiveName);
+  activeModuleId = matchByName || moduleOrder[0];
+  selectedBlockIds.clear();
+  setInsertionTarget(modules[activeModuleId].blocks, modules[activeModuleId].name);
+  render({ skipPseudoRegen:true });
+  hidePseudoError();
+}
+
+// ===== VERIFICACIÓN =====
+function collectAllBlocksFlat(list, acc){
+  for(const b of list){
+    acc.push(b);
+    if(b.slots){ b.slots.forEach(slot=> collectAllBlocksFlat(slot.list, acc)); }
+    if(b.cases){
+      b.cases.forEach(c=> collectAllBlocksFlat(c.list, acc));
+      collectAllBlocksFlat(b.defaultList, acc);
+    }
+  }
+  return acc;
+}
+function checkForbiddenTerminatorsInBranches(list, errs){
+  for(const b of list){
+    if(b.slots){ b.slots.forEach(slot=> checkBranchContents(slot.list, errs)); }
+    if(b.cases){
+      b.cases.forEach(c=> checkBranchContents(c.list, errs));
+      checkBranchContents(b.defaultList, errs);
+    }
+  }
+}
+function checkBranchContents(list, errs){
+  for(const b of list){
+    if(b.type==='inicio' || b.type==='fin'){
+      errs.push('no debe contener bloques Inicio/Fin dentro de una rama o cuerpo de ciclo.');
+    }
+    if(b.slots){ b.slots.forEach(slot=> checkBranchContents(slot.list, errs)); }
+    if(b.cases){
+      b.cases.forEach(c=> checkBranchContents(c.list, errs));
+      checkBranchContents(b.defaultList, errs);
+    }
+  }
+}
+
+function verify(){
+  const fb = document.getElementById('feedback');
+  fb.classList.remove('ok','err');
+  let allErrors = [];
+
+  moduleOrder.forEach(id=>{
+    const mod = modules[id];
+    const blocks = mod.blocks;
+    const errs = [];
+    if(blocks.length===0){
+      errs.push('está vacío.');
+    } else {
+      if(blocks[0].type !== 'inicio') errs.push('debe comenzar con Inicio.');
+      if(blocks[blocks.length-1].type !== 'fin') errs.push('debe terminar con Fin.');
+      if(blocks.filter(b=>b.type==='inicio').length>1) errs.push('tiene más de un bloque Inicio.');
+      if(blocks.filter(b=>b.type==='fin').length>1) errs.push('tiene más de un bloque Fin.');
+      const cuerpo = blocks.slice(1,-1);
+      if(cuerpo.length===0) errs.push('no tiene pasos entre Inicio y Fin.');
+      checkForbiddenTerminatorsInBranches(blocks, errs);
+    }
+    const allBlocks = collectAllBlocksFlat(blocks, []);
+    const sinEtiqueta = allBlocks.filter(b=> TYPES[b.type].needsLabel && (!b.label || !b.label.trim()));
+    if(sinEtiqueta.length>0) errs.push(`tiene ${sinEtiqueta.length} símbolo(s) sin descripción.`);
+    const llamadasRotas = allBlocks.filter(b=> TYPES[b.type].isCall && !modules[b.callTarget]);
+    if(llamadasRotas.length>0) errs.push(`tiene ${llamadasRotas.length} llamada(s) a módulo(s) inexistente(s).`);
+    const casosVacios = allBlocks.filter(b=> TYPES[b.type].isSwitch && b.cases.some(c=>!c.value || !c.value.trim()));
+    if(casosVacios.length>0) errs.push(`tiene ${casosVacios.length} bloque(s) "Según" con casos sin valor definido.`);
+
+    if(errs.length>0) allErrors.push(`· ${mod.name}: ${errs.join(' ')}`);
+  });
+
+  if(allErrors.length>0){
+    setLED('red');
+    fb.textContent = allErrors.join('\n');
+    fb.classList.add('err');
+    return;
+  }
+
+  setLED('green');
+  const totalModulos = moduleOrder.length;
+  let msg = `¡Programa válido, ${document.getElementById('studentName').value || 'estudiante'}! ${totalModulos} módulo(s) verificado(s) correctamente.`;
+  if(totalModulos===1){
+    msg += '\nTip: puedes dividir tu algoritmo en subprogramas usando "+ nuevo módulo" y el símbolo Llamar módulo.';
+  }
+  fb.textContent = msg;
+  fb.classList.add('ok');
+  awardXP(10);
+}
+
+function awardXP(amount){
+  xp += amount;
+  refreshProgressDisplay();
+}
+function refreshProgressDisplay(){
+  const maxXp = 60;
+  const pct = Math.min(100, (xp/maxXp)*100);
+  document.getElementById('xpFill').style.width = pct + '%';
+  document.getElementById('xpText').textContent = `XP: ${xp}`;
+  const level = xp>=60 ? 'Maestro' : xp>=30 ? 'Constructor' : xp>=10 ? 'Aprendiz+' : 'Aprendiz';
+  document.getElementById('levelText').textContent = `Nivel: ${level}`;
+  renderBadges();
+}
+function renderBadges(){
+  const wrap = document.getElementById('badges');
+  wrap.innerHTML = '';
+  BADGES.forEach(b=>{
+    const unlocked = xp >= b.threshold;
+    const el = document.createElement('div');
+    el.className = 'badge' + (unlocked ? ' unlocked' : '');
+    el.textContent = (unlocked ? '★ ' : '') + b.name;
+    wrap.appendChild(el);
+  });
+  const modBadge = document.createElement('div');
+  const modUnlocked = moduleOrder.length >= 2 && xp > 0;
+  modBadge.className = 'badge' + (modUnlocked ? ' unlocked' : '');
+  modBadge.textContent = (modUnlocked ? '★ ' : '') + 'Arquitecto Modular';
+  wrap.appendChild(modBadge);
+}
+
+// ===== PRUEBA DE ESCRITORIO (ejecución real) =====
+function dtEvalExpr(expr, vars){
+  try{
+    // filtra claves que no sean identificadores válidos de JS (p.ej. residuos de asignaciones mal formadas)
+    const keys = Object.keys(vars).filter(k => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k));
+    const vals = keys.map(k=>vars[k]);
+    const fn = new Function(...keys, `"use strict"; return (${expr});`);
+    return fn(...vals);
+  } catch(e){ return undefined; }
+}
+function dtAssignVar(lhs, value, vars){
+  const simple = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+  if(simple.test(lhs)){
+    vars[lhs] = value;
+    return true;
+  }
+  const indexed = lhs.match(/^([A-Za-z_$][A-Za-z0-9_$]*)((?:\s*\[[^\]]+\]\s*)+)$/);
+  if(indexed){
+    const base = indexed[1];
+    const idxExprs = [...indexed[2].matchAll(/\[([^\]]+)\]/g)].map(m => dtEvalExpr(m[1], vars));
+    if(idxExprs.some(i => i===undefined || Number.isNaN(i))) return false;
+    if(!Array.isArray(vars[base])) vars[base] = [];
+    let target = vars[base];
+    for(let k=0; k<idxExprs.length-1; k++){
+      const idx = idxExprs[k];
+      if(!Array.isArray(target[idx])) target[idx] = [];
+      target = target[idx];
+    }
+    target[idxExprs[idxExprs.length-1]] = value;
+    return true;
+  }
+  return false; // no se reconoce como variable simple ni como arreglo indexado
+}
+function dtParseInputValue(raw){
+  if(raw===null) return undefined;
+  const trimmed = raw.trim();
+  if(trimmed==='') return '';
+  const num = Number(trimmed);
+  return isNaN(num) ? trimmed : num;
+}
+function dtFormatValue(v){
+  if(Array.isArray(v) || (v && typeof v==='object')) return JSON.stringify(v);
+  return String(v);
+}
+function dtSnapshot(vars){
+  const keys = Object.keys(vars);
+  if(keys.length===0) return '—';
+  return keys.map(k=>`${k}=${dtFormatValue(vars[k])}`).join('   ');
+}
+
+// Separa una lista de argumentos por comas, respetando comas que estén dentro de
+// comillas (simples o dobles), para que un texto como "Ingrese el NIP, por favor"
+// no se rompa en dos pedazos.
+function splitArgList(str){
+  const parts = [];
+  let current = '';
+  let quoteChar = null;
+  for(let i=0; i<str.length; i++){
+    const ch = str[i];
+    if(quoteChar){
+      current += ch;
+      if(ch===quoteChar) quoteChar = null;
+    } else if(ch==='"' || ch==="'"){
+      quoteChar = ch;
+      current += ch;
+    } else if(ch===','){
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current.trim());
+  return parts.filter(p=>p!=='');
+}
+
+// Detecta si un Proceso que no se pudo evaluar en realidad trae VARIAS asignaciones
+// juntas separadas por comas (ej. "a = 1, b = 2"), que es el error más común de este tipo,
+// para explicarle al estudiante exactamente qué corregir en vez de un mensaje genérico.
+function procesoErrorHint(label){
+  const looksLikeMultiAssign = /,\s*[A-Za-z_$][A-Za-z0-9_$]*(\s*\[[^\]]+\])*\s*=(?!=)/.test(label);
+  if(looksLikeMultiAssign){
+    return 'no se pudo evaluar (parece que hay varias asignaciones juntas en un solo bloque — este símbolo solo admite UNA "variable = expresión" a la vez; separa cada asignación en su propio bloque de Proceso)';
+  }
+  return 'no se pudo evaluar';
+}
+
+async function runDeskCheck(){
+  if(modules.principal.blocks.length===0){
+    await showAlertModal('Falta el programa principal', 'Construye al menos el módulo "Programa Principal" antes de ejecutar una prueba de escritorio.');
+    return;
+  }
+  const vars = {};
+  const trace = [];
+  let stepCounter = 0;
+  const MAX_STEPS = 400;
+  const MAX_ITER = 50;
+  let aborted = false;
+
+  async function execList(list, moduleName, callPath){
+    for(const b of list){
+      if(aborted) return;
+      stepCounter++;
+      if(stepCounter > MAX_STEPS){
+        trace.push({ step:stepCounter, modulo:moduleName, simbolo:'⚠', detalle:'Límite de pasos alcanzado (posible ciclo). Se detiene la prueba de escritorio.', vars:dtSnapshot(vars) });
+        aborted = true; return;
+      }
+      const def = TYPES[b.type];
+
+      if(def.slotDefs){
+        if(b.type==='condDoble'){
+          const result = dtEvalExpr(b.label, vars);
+          trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:`Si (${b.label}) → ${result===undefined?'no evaluable':(result?'verdadero → rama Verdadero':'falso → rama Falso')}`, vars:dtSnapshot(vars) });
+          if(result===true) await execList(b.slots[0].list, moduleName, callPath);
+          else if(result===false) await execList(b.slots[1].list, moduleName, callPath);
+        } else if(b.type==='condSimple'){
+          const result = dtEvalExpr(b.label, vars);
+          trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:`Si (${b.label}) → ${result===undefined?'no evaluable':(result?'verdadero → ejecuta':'falso → continúa sin ejecutar')}`, vars:dtSnapshot(vars) });
+          if(result===true) await execList(b.slots[0].list, moduleName, callPath);
+        } else if(b.type==='para' || b.type==='mientras'){
+          trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:`${def.pseudo(b.label)} → evaluando condición antes de repetir`, vars:dtSnapshot(vars) });
+          let it=0;
+          while(true){
+            const cond = dtEvalExpr(b.label, vars);
+            if(cond!==true) break;
+            it++;
+            if(it>MAX_ITER){ trace.push({step:++stepCounter, modulo:moduleName, simbolo:'⚠', detalle:'Límite de iteraciones alcanzado (posible ciclo infinito).', vars:dtSnapshot(vars)}); aborted=true; break; }
+            await execList(b.slots[0].list, moduleName, callPath);
+            if(aborted) break;
+          }
+        } else if(b.type==='hacermientras'){
+          trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:'Hacer → ejecuta el cuerpo al menos una vez', vars:dtSnapshot(vars) });
+          let it=0, cond=true;
+          do{
+            it++;
+            if(it>MAX_ITER){ trace.push({step:++stepCounter, modulo:moduleName, simbolo:'⚠', detalle:'Límite de iteraciones alcanzado (posible ciclo infinito).', vars:dtSnapshot(vars)}); aborted=true; break; }
+            await execList(b.slots[0].list, moduleName, callPath);
+            if(aborted) break;
+            cond = dtEvalExpr(b.label, vars);
+            stepCounter++;
+            trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:`Mientras (${b.label}) → ${cond===undefined?'no evaluable':(cond?'verdadero → repite':'falso → termina el ciclo')}`, vars:dtSnapshot(vars) });
+          } while(cond===true);
+        }
+        continue;
+      }
+
+      if(def.isSwitch){
+        const selectorVal = dtEvalExpr(b.label, vars);
+        let matched = null;
+        for(const c of b.cases){
+          if(!c.value || !c.value.trim()) continue;
+          const caseVal = dtEvalExpr(c.value, vars);
+          if(caseVal!==undefined && selectorVal!==undefined && caseVal===selectorVal){ matched = c; break; }
+        }
+        trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name,
+          detalle:`Según (${b.label}) → selector=${selectorVal===undefined?'no evaluable':dtFormatValue(selectorVal)} → ${matched ? `coincide con caso ${matched.value}` : 'ningún caso coincide → rama "Otro"'}`,
+          vars:dtSnapshot(vars) });
+        if(matched) await execList(matched.list, moduleName, callPath);
+        else await execList(b.defaultList, moduleName, callPath);
+        continue;
+      }
+
+      let detalle = '';
+      if(b.type==='inicio' || b.type==='fin'){
+        detalle = def.name;
+      } else if(b.type==='entrada'){
+        const names = splitArgList(b.label||'');
+        if(names.length===0){ detalle = 'Leer (sin variables definidas)'; }
+        else {
+          const partes = [];
+          for(const n of names){
+            const raw = await showPromptModal('Prueba de escritorio', `Módulo "${moduleName}"<br>Leer valor para <b>${n}</b>:`, '0');
+            const val = dtParseInputValue(raw);
+            if(val===undefined){ aborted = true; trace.push({step:stepCounter, modulo:moduleName, simbolo:def.name, detalle:'Prueba de escritorio cancelada por el usuario.', vars:dtSnapshot(vars)}); return; }
+            dtAssignVar(n, val, vars);
+            partes.push(`${n}=${val}`);
+          }
+          detalle = `Leer (${b.label}) → ${partes.join(', ')}`;
+        }
+      } else if(b.type==='proceso'){
+        // Cada asignación puede ir en su propia línea Y/O separada por comas (respetando
+        // comas dentro de comillas, para no partir un texto como "Hola, mundo").
+        const lineas = (b.label||'').split('\n').flatMap(linea => splitArgList(linea));
+        const partes = [];
+        for(const linea of lineas){
+          const eq = linea.indexOf('=');
+          if(eq>-1 && linea[eq+1]!=='='){
+            const lhs = linea.slice(0,eq).trim();
+            const rhs = linea.slice(eq+1).trim();
+            const result = dtEvalExpr(rhs, vars);
+            if(result===undefined){ partes.push(`${linea} → ${procesoErrorHint(linea)}`); }
+            else if(!dtAssignVar(lhs, result, vars)){ partes.push(`${linea} → no se reconoce "${lhs}" como variable o arreglo válido`); }
+            else { partes.push(`${lhs} = ${dtFormatValue(result)}`); }
+          } else {
+            partes.push(`${linea} (no se reconoce como "variable = expresión")`);
+          }
+        }
+        detalle = partes.length ? partes.join('  |  ') : '(bloque vacío)';
+      } else if(b.type==='salida'){
+        const names = splitArgList(b.label||'');
+        const partes = names.map(n => {
+          if(/^".*"$/.test(n) || /^'.*'$/.test(n)) return n;
+          if(n!=='' && !isNaN(Number(n))) return n;
+          const val = dtEvalExpr(n, vars);
+          return val===undefined ? `${n}=??? (no definida)` : `${n}=${dtFormatValue(val)}`;
+        });
+        detalle = `Imprimir (${b.label}) → ${partes.join(', ')}`;
+      } else if(b.type==='conector' || b.type==='conectorp'){
+        detalle = def.pseudo(b.label || '');
+      } else if(b.type==='llamar'){
+        const targetName = modules[b.callTarget] ? modules[b.callTarget].name : '??? (módulo eliminado)';
+        detalle = `Llamar módulo: ${targetName}`;
+        trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle, vars:dtSnapshot(vars) });
+        if(modules[b.callTarget]){
+          if(callPath.includes(b.callTarget)){
+            stepCounter++;
+            trace.push({ step:stepCounter, modulo:modules[b.callTarget].name, simbolo:'⚠ Ciclo', detalle:'Llamada circular detectada entre módulos; se detiene el seguimiento de esta rama.', vars:dtSnapshot(vars) });
+          } else {
+            await execList(modules[b.callTarget].blocks, modules[b.callTarget].name, [...callPath, b.callTarget]);
+          }
+        }
+        continue;
+      }
+      trace.push({ step:stepCounter, modulo:moduleName, simbolo:def.name, detalle, vars:dtSnapshot(vars) });
+    }
+  }
+
+  await execList(modules.principal.blocks, modules.principal.name, ['principal']);
+  renderDeskCheck(trace);
+}
+
+function renderDeskCheck(trace){
+  const wrap = document.getElementById('deskcheckTableWrap');
+  document.getElementById('deskcheckSubtitle').textContent = `(${trace.length} paso(s) ejecutados)`;
+  if(trace.length===0){
+    wrap.innerHTML = '<p style="color:var(--text-dim);font-size:.8rem;">No se ejecutó ningún paso.</p>';
+  } else {
+    let html = `<table class="dt-table"><thead><tr>
+      <th>Paso</th><th>Módulo</th><th>Símbolo</th><th>Detalle</th><th>Variables</th>
+    </tr></thead><tbody>`;
+    trace.forEach(row=>{
+      html += `<tr>
+        <td>${row.step}</td>
+        <td class="dt-mod">${escapeHtml(row.modulo)}</td>
+        <td class="dt-sym">${escapeHtml(row.simbolo)}</td>
+        <td>${escapeHtml(row.detalle)}</td>
+        <td class="dt-vars">${escapeHtml(row.vars)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+  document.getElementById('deskcheckPanel').style.display = 'block';
+  document.getElementById('deskcheckPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ===== TERMINAL DE EJECUCIÓN (beta) — ejecución real, asíncrona =====
+let terminalRunning = false;
+let terminalAbort = false;
+let currentInputResolver = null;
+
+function termLine(text, cls){
+  const term = document.getElementById('terminalOutput');
+  const div = document.createElement('div');
+  div.className = 'line ' + (cls||'out');
+  div.textContent = text;
+  term.appendChild(div);
+  term.scrollTop = term.scrollHeight;
+}
+
+function termReadInput(promptText){
+  return new Promise((resolve)=>{
+    const term = document.getElementById('terminalOutput');
+    const row = document.createElement('div');
+    row.className = 'line prompt-line';
+    const label = document.createElement('span');
+    label.className = 'prompt-label';
+    label.textContent = promptText;
+    const input = document.createElement('input');
+    input.className = 'prompt-input';
+    input.type = 'text';
+    input.autocomplete = 'off';
+    row.appendChild(label);
+    row.appendChild(input);
+    term.appendChild(row);
+    term.scrollTop = term.scrollHeight;
+    input.focus();
+
+    function finish(val){
+      input.disabled = true;
+      currentInputResolver = null;
+      resolve(val);
+    }
+    currentInputResolver = finish;
+    input.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') finish(input.value);
+    });
+  });
+}
+
+async function runTerminal(){
+  if(terminalRunning) return;
+  if(modules.principal.blocks.length===0){
+    await showAlertModal('Falta el programa principal', 'Construye al menos el módulo "Programa Principal" antes de ejecutar.');
+    return;
+  }
+  terminalRunning = true;
+  terminalAbort = false;
+  const term = document.getElementById('terminalOutput');
+  term.innerHTML = '';
+  document.getElementById('terminalPanel').style.display = 'block';
+  document.getElementById('terminalPanel').scrollIntoView({behavior:'smooth', block:'start'});
+  termLine(`▶ Ejecutando ${modules.principal.name}...`, 'sys');
+
+  const vars = {};
+  let stepCounter = 0;
+  const MAX_STEPS = 400;
+  const MAX_ITER = 50;
+
+  async function execListAsync(list, moduleName, callPath){
+    for(const b of list){
+      if(terminalAbort) return;
+      stepCounter++;
+      if(stepCounter > MAX_STEPS){
+        termLine('⚠ Límite de pasos alcanzado (posible ciclo). Ejecución detenida.', 'err');
+        terminalAbort = true; return;
+      }
+      const def = TYPES[b.type];
+
+      if(def.slotDefs){
+        if(b.type==='condDoble'){
+          const result = dtEvalExpr(b.label, vars);
+          if(result===true) await execListAsync(b.slots[0].list, moduleName, callPath);
+          else if(result===false) await execListAsync(b.slots[1].list, moduleName, callPath);
+        } else if(b.type==='condSimple'){
+          const result = dtEvalExpr(b.label, vars);
+          if(result===true) await execListAsync(b.slots[0].list, moduleName, callPath);
+        } else if(b.type==='para' || b.type==='mientras'){
+          let it=0;
+          while(true){
+            if(terminalAbort) return;
+            const cond = dtEvalExpr(b.label, vars);
+            if(cond!==true) break;
+            it++;
+            if(it>MAX_ITER){ termLine('⚠ Límite de iteraciones alcanzado (posible ciclo infinito).', 'err'); terminalAbort=true; break; }
+            await execListAsync(b.slots[0].list, moduleName, callPath);
+          }
+        } else if(b.type==='hacermientras'){
+          let it=0, cond=true;
+          do{
+            if(terminalAbort) return;
+            it++;
+            if(it>MAX_ITER){ termLine('⚠ Límite de iteraciones alcanzado (posible ciclo infinito).', 'err'); terminalAbort=true; break; }
+            await execListAsync(b.slots[0].list, moduleName, callPath);
+            if(terminalAbort) return;
+            cond = dtEvalExpr(b.label, vars);
+          } while(cond===true);
+        }
+        continue;
+      }
+
+      if(def.isSwitch){
+        const selectorVal = dtEvalExpr(b.label, vars);
+        let matched = null;
+        for(const c of b.cases){
+          if(!c.value || !c.value.trim()) continue;
+          const caseVal = dtEvalExpr(c.value, vars);
+          if(caseVal!==undefined && selectorVal!==undefined && caseVal===selectorVal){ matched = c; break; }
+        }
+        if(matched) await execListAsync(matched.list, moduleName, callPath);
+        else await execListAsync(b.defaultList, moduleName, callPath);
+        continue;
+      }
+
+      if(b.type==='entrada'){
+        const names = splitArgList(b.label||'');
+        for(const n of names){
+          if(terminalAbort) return;
+          const raw = await termReadInput(`Leer ${n}: `);
+          if(terminalAbort) return;
+          dtAssignVar(n, dtParseInputValue(raw), vars);
+        }
+      } else if(b.type==='proceso'){
+        const lineas = (b.label||'').split('\n').flatMap(linea => splitArgList(linea));
+        for(const linea of lineas){
+          const eq = linea.indexOf('=');
+          if(eq>-1 && linea[eq+1]!=='='){
+            const lhs = linea.slice(0,eq).trim();
+            const rhs = linea.slice(eq+1).trim();
+            const result = dtEvalExpr(rhs, vars);
+            if(result===undefined){
+              termLine(`⚠ Proceso "${linea}" → ${procesoErrorHint(linea)}`, 'err');
+            } else if(!dtAssignVar(lhs, result, vars)){
+              termLine(`⚠ Proceso "${linea}" → no se reconoce "${lhs}" como variable o arreglo válido`, 'err');
+            }
+          } else {
+            termLine(`⚠ Proceso "${linea}" → no se reconoce como "variable = expresión"`, 'err');
+          }
+        }
+      } else if(b.type==='salida'){
+        const names = splitArgList(b.label||'');
+        const partes = names.map(n=>{
+          if(/^".*"$/.test(n) || /^'.*'$/.test(n)) return n.slice(1,-1);
+          if(n!=='' && !isNaN(Number(n))) return n;
+          const val = dtEvalExpr(n, vars);
+          return val===undefined ? '???' : dtFormatValue(val);
+        });
+        termLine('>> ' + partes.join('   '), 'out');
+      } else if(b.type==='llamar'){
+        if(modules[b.callTarget]){
+          if(callPath.includes(b.callTarget)){
+            termLine('⚠ Llamada circular detectada entre módulos.', 'err');
+          } else {
+            await execListAsync(modules[b.callTarget].blocks, modules[b.callTarget].name, [...callPath, b.callTarget]);
+          }
+        }
+      }
+      // inicio/fin/conector/conectorp: sin salida visible en terminal
+    }
+  }
+
+  await execListAsync(modules.principal.blocks, modules.principal.name, ['principal']);
+
+  if(terminalAbort){
+    termLine('⏹ Ejecución detenida.', 'err');
+  } else {
+    termLine('✅ Programa terminado.', 'ok');
+  }
+  terminalRunning = false;
+}
+
+// ===== EXPORTAR / IMPORTAR DIAGRAMA =====
+function exportDiagram(){
+  syncActiveInput();
+  const data = {
+    formato: 'constructor-logico-modular',
+    version: 1,
+    exportadoEl: new Date().toISOString(),
+    estudiante: document.getElementById('studentName').value || '',
+    xp: xp,
+    uid: uid,
+    activeModuleId: activeModuleId,
+    moduleOrder: moduleOrder,
+    modules: modules
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const fecha = new Date().toISOString().slice(0,10);
+  const nombreSeguro = (data.estudiante.trim() || 'diagrama').replace(/[^a-zA-Z0-9_\-áéíóúÁÉÍÓÚñÑ ]/g,'').trim().replace(/\s+/g,'_') || 'diagrama';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nombreSeguro}_${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+function isValidDiagramData(data){
+  return data && typeof data==='object' && data.modules && data.moduleOrder && Array.isArray(data.moduleOrder) && data.modules[data.moduleOrder[0]];
+}
+
+async function importDiagramFromFile(file){
+  const hasContent = modules.principal.blocks.length>0 || moduleOrder.length>1;
+  if(hasContent){
+    const ok = await showConfirmModal('Importar diagrama', 'Esto reemplazará por completo el diagrama que tienes abierto ahora mismo. ¿Deseas continuar?', 'Importar y reemplazar', 'modal-btn-primary');
+    if(!ok) return;
+  }
+  const text = await file.text();
+  let data;
+  try{ data = JSON.parse(text); } catch(e){ data = null; }
+  if(!isValidDiagramData(data)){
+    await showAlertModal('Archivo no válido', 'Ese archivo no es un diagrama exportado por el Constructor Lógico Modular (o está dañado).');
+    return;
+  }
+  modules = data.modules;
+  moduleOrder = data.moduleOrder;
+  uid = typeof data.uid === 'number' ? data.uid : (uid + 1000);
+  xp = typeof data.xp === 'number' ? data.xp : 0;
+  activeModuleId = moduleOrder.includes(data.activeModuleId) ? data.activeModuleId : moduleOrder[0];
+  if(data.estudiante) document.getElementById('studentName').value = data.estudiante;
+  setInsertionTarget(modules[activeModuleId].blocks, modules[activeModuleId].name);
+  render();
+  refreshProgressDisplay();
+  setLED('amber');
+  document.getElementById('feedback').textContent = 'Sin verificar todavía.';
+  document.getElementById('feedback').className = 'feedback';
+  await showAlertModal('Diagrama importado', `Se cargó correctamente${data.estudiante ? ' el diagrama de ' + data.estudiante : ' el diagrama'} (${moduleOrder.length} módulo(s)). Recuerda verificarlo de nuevo.`);
+}
+
+// ===== GESTIÓN DE ALUMNOS =====
+let studentRoster = [];
+
+function validateModulesData(modulesObj, moduleOrderArr){
+  const allErrors = [];
+  moduleOrderArr.forEach(id=>{
+    const mod = modulesObj[id];
+    if(!mod){ return; }
+    const blocks = mod.blocks || [];
+    const errs = [];
+    if(blocks.length===0){
+      errs.push('está vacío.');
+    } else {
+      if(blocks[0].type !== 'inicio') errs.push('debe comenzar con Inicio.');
+      if(blocks[blocks.length-1].type !== 'fin') errs.push('debe terminar con Fin.');
+      if(blocks.filter(b=>b.type==='inicio').length>1) errs.push('tiene más de un bloque Inicio.');
+      if(blocks.filter(b=>b.type==='fin').length>1) errs.push('tiene más de un bloque Fin.');
+      const cuerpo = blocks.slice(1,-1);
+      if(cuerpo.length===0) errs.push('no tiene pasos entre Inicio y Fin.');
+      checkForbiddenTerminatorsInBranches(blocks, errs);
+    }
+    const allBlocks = collectAllBlocksFlat(blocks, []);
+    const sinEtiqueta = allBlocks.filter(b=> TYPES[b.type] && TYPES[b.type].needsLabel && (!b.label || !b.label.trim()));
+    if(sinEtiqueta.length>0) errs.push(`tiene ${sinEtiqueta.length} símbolo(s) sin descripción.`);
+    const llamadasRotas = allBlocks.filter(b=> TYPES[b.type] && TYPES[b.type].isCall && !modulesObj[b.callTarget]);
+    if(llamadasRotas.length>0) errs.push(`tiene ${llamadasRotas.length} llamada(s) a módulo(s) inexistente(s).`);
+    if(errs.length>0) allErrors.push(`${mod.name}: ${errs.join(' ')}`);
+  });
+  return { valid: allErrors.length===0, errors: allErrors };
+}
+
+function computeComplexity(modulesObj, moduleOrderArr){
+  let score = 0;
+  let usedCond = false, usedLoop = false, usedArray = false, usedNested = false;
+
+  function scanList(list, insideControl){
+    for(const b of list){
+      const isControl = b.type==='condDoble' || b.type==='condSimple' || b.type==='para' || b.type==='mientras' || b.type==='hacermientras' || b.type==='segun';
+      if(isControl){
+        if(b.type==='condDoble' || b.type==='condSimple' || b.type==='segun') usedCond = true;
+        else usedLoop = true;
+        score += 1;
+        if(insideControl){ usedNested = true; score += 2; }
+        if(b.slots) b.slots.forEach(slot=> scanList(slot.list, true));
+        if(b.cases){
+          b.cases.forEach(c=> scanList(c.list, true));
+          scanList(b.defaultList||[], true);
+        }
+      } else {
+        if(b.label && /[A-Za-z_ÁÉÍÓÚáéíóúÑñ][\w]*\s*\[/.test(b.label)) usedArray = true;
+        if(b.slots) b.slots.forEach(slot=> scanList(slot.list, insideControl));
+        if(b.cases){
+          b.cases.forEach(c=> scanList(c.list, insideControl));
+          scanList(b.defaultList||[], insideControl);
+        }
+      }
+    }
+  }
+  moduleOrderArr.forEach(id=>{
+    if(modulesObj[id]) scanList(modulesObj[id].blocks || [], false);
+  });
+  if(usedArray) score += 2;
+
+  let calls = 0;
+  moduleOrderArr.forEach(id=>{
+    if(!modulesObj[id]) return;
+    const flat = collectAllBlocksFlat(modulesObj[id].blocks || [], []);
+    calls += flat.filter(b=>b.type==='llamar').length;
+  });
+  const modCount = moduleOrderArr.length;
+  if(modCount > 1 && calls > 0) score += 1;
+
+  let nivel = 'Básico';
+  const esAvanzado = usedNested || usedArray || (modCount > 1 && calls > 0);
+  const esIntermedio = usedCond || usedLoop;
+  if(esAvanzado) nivel = 'Avanzado';
+  else if(esIntermedio) nivel = 'Intermedio';
+
+  return { score, nivel, usedCond, usedLoop, usedArray, usedNested, modCount };
+}
+
+function levelClass(nivel){
+  if(nivel==='Avanzado') return 'level-avanzado';
+  if(nivel==='Intermedio') return 'level-intermedio';
+  return 'level-basico';
+}
+
+async function handleRosterFiles(fileList){
+  for(const file of fileList){
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!isValidDiagramData(data)) continue;
+      const validation = validateModulesData(data.modules, data.moduleOrder);
+      const complexity = computeComplexity(data.modules, data.moduleOrder);
+      studentRoster.push({
+        nombre: data.estudiante || '(sin nombre)',
+        fecha: data.exportadoEl ? new Date(data.exportadoEl) : null,
+        valido: validation.valid,
+        errores: validation.errors,
+        xp: typeof data.xp === 'number' ? data.xp : 0,
+        modCount: complexity.modCount,
+        nivel: complexity.nivel,
+        score: complexity.score,
+        detalle: complexity,
+        rawData: data
+      });
+    } catch(e){ /* archivo ilegible: se ignora */ }
+  }
+  renderRosterTable();
+}
+
+function renderRosterTable(){
+  const wrap = document.getElementById('rosterTableWrap');
+  if(studentRoster.length===0){
+    wrap.innerHTML = '<div class="roster-empty">Todavía no has importado ningún diagrama de alumno.</div>';
+    return;
+  }
+  let html = `<table class="roster-table"><thead><tr>
+    <th>#</th><th>Alumno</th><th>Fecha</th><th>Módulos</th><th>¿Válido?</th><th>XP</th><th>Nivel de razonamiento lógico</th><th>Acciones</th>
+  </tr></thead><tbody>`;
+  studentRoster.forEach((s, i)=>{
+    const fechaTxt = s.fecha ? s.fecha.toLocaleDateString() : '—';
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${escapeHtml(s.nombre)}</td>
+      <td>${fechaTxt}</td>
+      <td>${s.modCount}</td>
+      <td><span class="valid-tag ${s.valido?'valid-si':'valid-no'}">${s.valido?'Sí':'No'}</span></td>
+      <td>${s.xp}</td>
+      <td><span class="level-tag ${levelClass(s.nivel)}">${s.nivel}</span> <span style="color:var(--text-dim);">(${s.score} pts)</span></td>
+      <td>
+        <button class="roster-action" data-ver="${i}">Ver diagrama</button>
+        <button class="roster-action danger" data-quitar="${i}">Quitar</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('[data-ver]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const idx = Number(e.target.dataset.ver);
+      const entry = studentRoster[idx];
+      const hasContent = modules.principal.blocks.length>0 || moduleOrder.length>1;
+      if(hasContent){
+        const ok = await showConfirmModal('Ver diagrama', `Esto reemplazará el diagrama que tienes abierto ahora mismo por el de ${entry.nombre}. ¿Continuar?`, 'Ver este diagrama', 'modal-btn-primary');
+        if(!ok) return;
+      }
+      const data = entry.rawData;
+      modules = data.modules;
+      moduleOrder = data.moduleOrder;
+      uid = typeof data.uid === 'number' ? data.uid : (uid + 1000);
+      xp = typeof data.xp === 'number' ? data.xp : 0;
+      activeModuleId = moduleOrder.includes(data.activeModuleId) ? data.activeModuleId : moduleOrder[0];
+      if(data.estudiante) document.getElementById('studentName').value = data.estudiante;
+      setInsertionTarget(modules[activeModuleId].blocks, modules[activeModuleId].name);
+      render();
+      refreshProgressDisplay();
+      setLED('amber');
+      document.getElementById('feedback').textContent = 'Sin verificar todavía.';
+      document.getElementById('feedback').className = 'feedback';
+      document.getElementById('rosterPanel').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+  wrap.querySelectorAll('[data-quitar]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const idx = Number(e.target.dataset.quitar);
+      studentRoster.splice(idx,1);
+      renderRosterTable();
+    });
+  });
+}
+
+function exportRosterCsv(){
+  if(studentRoster.length===0) return;
+  const rows = [['Alumno','Fecha','Módulos','Válido','XP','Nivel de razonamiento lógico','Puntaje']];
+  studentRoster.forEach(s=>{
+    rows.push([
+      s.nombre,
+      s.fecha ? s.fecha.toLocaleDateString() : '',
+      s.modCount,
+      s.valido ? 'Sí' : 'No',
+      s.xp,
+      s.nivel,
+      s.score
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `resumen_alumnos_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+// ===== EVENTOS GLOBALES =====
+document.getElementById('canvas').addEventListener('click', (e)=>{
+  if(e.target.closest('.branch')) return;
+  setInsertionTarget(currentModule().blocks, modules[activeModuleId].name);
+});
+document.getElementById('rootTargetChip').addEventListener('click', ()=>{
+  setInsertionTarget(currentModule().blocks, modules[activeModuleId].name);
+});
+document.getElementById('pasteBtn').addEventListener('click', pasteBlock);
+document.getElementById('selectModeBtn').addEventListener('click', toggleSelectionMode);
+document.getElementById('copySelectionBtn').addEventListener('click', copySelection);
+document.getElementById('cancelSelectionBtn').addEventListener('click', ()=>{
+  selectionMode = false;
+  selectedBlockIds.clear();
+  updateSelectionUI();
+  render();
+});
+let pseudoEditTimer = null;
+document.getElementById('pseudoOut').addEventListener('input', ()=>{
+  clearTimeout(pseudoEditTimer);
+  pseudoEditTimer = setTimeout(tryApplyPseudocodeEdit, 700);
+});
+document.getElementById('verifyBtn').addEventListener('click', verify);
+document.getElementById('deskCheckBtn').addEventListener('click', runDeskCheck);
+document.getElementById('closeDeskCheck').addEventListener('click', ()=>{
+  document.getElementById('deskcheckPanel').style.display = 'none';
+});
+document.getElementById('terminalBtn').addEventListener('click', runTerminal);
+document.getElementById('stopTerminal').addEventListener('click', ()=>{
+  terminalAbort = true;
+  if(currentInputResolver) currentInputResolver('');
+});
+document.getElementById('closeTerminal').addEventListener('click', ()=>{
+  terminalAbort = true;
+  if(currentInputResolver) currentInputResolver('');
+  document.getElementById('terminalPanel').style.display = 'none';
+});
+document.getElementById('exportBtn').addEventListener('click', exportDiagram);
+document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFileInput').click());
+document.getElementById('importFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(file) importDiagramFromFile(file);
+  e.target.value = '';
+});
+document.getElementById('rosterToggleBtn').addEventListener('click', ()=>{
+  const panel = document.getElementById('rosterPanel');
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : 'block';
+  if(!showing) panel.scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.getElementById('rosterFileInput').addEventListener('change', (e)=>{
+  const files = Array.from(e.target.files || []);
+  if(files.length) handleRosterFiles(files);
+  e.target.value = '';
+});
+document.getElementById('exportRosterCsv').addEventListener('click', exportRosterCsv);
+
+buildKeypad();
+setInsertionTarget(modules.principal.blocks, modules.principal.name);
+render();
+renderBadges();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
